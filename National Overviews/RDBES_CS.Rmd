@@ -18,7 +18,7 @@ options(kableExtra.auto_format = FALSE)
 
 ```
 
-```{r libraries}
+```{r libraries, include=FALSE}
 library(dplyr)
 library(knitr)
 library(tidyr)
@@ -319,11 +319,9 @@ mutate(lon = ices.rect(FOstatRect)$lon,
   ICESareas_subset <- st_crop(ICESareas, 
                             c(xmin = min.lon-2, xmax = max.lon+2, ymin = min.lat-2, ymax = max.lat+2))
 
-  
 mapFO <- list()
 for(i in sort(unique(FOmap$FOmetier6))){
 
-  
   mapFO[[i]] <- 
     ggplot() +
     theme_bw() +
@@ -1150,7 +1148,7 @@ for(i in unique(names(myplotsWtfreq_BV))) {
 ```
 
 
-## Overview combined variables {.tabset}
+### Overview combined variables {.tabset}
 
 #### Length-Weight {.tabset}
 
