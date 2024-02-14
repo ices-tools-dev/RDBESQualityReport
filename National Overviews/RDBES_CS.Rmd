@@ -1,0 +1,1319 @@
+```{r title, include = F}
+
+front_title <- "RDBES CS National overview (Hierarchy 2)"
+
+```
+
+---
+title: `r front_title`
+author: "ICES RDBES ISSG Quality"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+options(kableExtra.auto_format = FALSE)
+
+```
+
+```{r libraries}
+library(dplyr)
+library(knitr)
+library(tidyr)
+library(ggplot2)
+library(data.table)
+library(mapplots)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(stringr)
+library(RDBEScore)
+library(RColorBrewer)
+library(htmltools)
+library(vistime)
+library(kableExtra)
+library(plotly)
+library(vmstools)
+library(readxl)
+```
+
+```{r ReadData, echo=FALSE, message=FALSE, warning = FALSE}
+
+zipFiles <- c("./Input/2023_10_03_152050.zip")
+importedTables <- createRDBESDataObject(zipFiles)
+
+# get th different CS tables from the imported sbox data
+FT<-importedTables$FT
+FO<-importedTables$FO
+SA<-importedTables$SA
+SS<-importedTables$SS
+FM<-importedTables$FM
+BV<-importedTables$BV
+
+FT_DF <- as.data.frame(FT)
+FT_DF$n_records <- 1
+
+FO_DF <- as.data.frame(FO)
+FO_DF$n_records <- 1
+
+SA_DF <- as.data.frame(SA)
+SA_DF$n_records <- 1
+
+SS_DF <- as.data.frame(SS)
+SS_DF$n_records <- 1
+
+FM_DF <- as.data.frame(FM)
+FM_DF$n_records <- 1
+
+BV_DF <- as.data.frame(BV)
+BV_DF$n_records <- 1
+
+
+data(ICESareas)
+
+```
+
+```{r stocklist, include = FALSE}
+dtStockListBE <- read_excel("../ndgp.ices.wg.general/INPUT/2023/dtStockList_BEL.xlsx") 
+
+dtStockListBE$SAspeCodeFAO <- toupper(substr(dtStockListBE$StockKeyLabel, 1, 3))
+
+areas_list <- strsplit(dtStockListBE$AllAreas, ", ")
+expanded_areas <- unlist(areas_list)
+
+expanded_data <- data.frame(
+  Area = expanded_areas,
+  StockKeyLabel = rep(dtStockListBE$StockKeyLabel, sapply(areas_list, length)),
+  stringsAsFactors = FALSE
+) %>% 
+mutate(SAspeCodeFAO = toupper(substr(StockKeyLabel, 1, 3)))
+
+# Merge SA_DF with expanded_data based on species and area
+SA_DF <- merge(SA_DF, expanded_data, by.x = c("SAspeCodeFAO", "SAarea"), by.y = c("SAspeCodeFAO", "Area"), all.x = FALSE)
+
+```
+
+```{r functions, include = FALSE}
+catHeader <- function(text = "", level = 3) {
+    cat(paste0("\n\n", 
+               paste(rep("#", level), collapse = ""), 
+               " ", text, "\n"))
+}
+
+
+geom_ices_squares <- function (xlim = c(-49,70), ylim = c(36, 85.5),...){
+  outside <- F
+  if(xlim[1] < -49) {xlim[1] <- -49; outside <- T}
+  if(xlim[2] > 70)  {xlim[2] <- 70; outside <- T}
+  if(ylim[1] < -49) {ylim[1] <- -49; outside <- T}
+  if(ylim[2] > 85.5){ylim[2] <- 85.5; outside <- T}
+  if(outside) print("longitude & latitude must be inside the interval [-49;70] & [36;85.5]")
+  list(
+    geom_vline(xintercept = -49:70,,...),
+    geom_hline(yintercept = seq(36,85.5, by = 0.5),...),
+    scale_x_continuous(sec.axis = sec_axis(~.x,
+                                           breaks = -49.5:69.5,
+                                           labels = paste(rep(LETTERS[1:12],each=10),0:9,sep=''),
+                                           guide = guide_axis(check.overlap = TRUE))),
+    scale_y_continuous(sec.axis = sec_axis(~.x,
+                                           breaks = seq(36.25, 85.25, by = 0.5),
+                                           labels = sprintf("%02d",c(1:99)),
+                                           guide = guide_axis(check.overlap = TRUE))),
+    coord_quickmap(xlim, ylim)  )}
+
+combined_palette <- c(brewer.pal(9, "Set1"), brewer.pal(8, "Set2"), brewer.pal(12, "Set3"))
+
+```
+
+# Data source: RDBES CS data {.tabset}
+
+## RDBES FT (Fishing Trip) data
+
+### Overviews number of records {.tabset}
+
+N total FF records: `r sum(FT_DF$n_records)`
+
+#### by FTsampType and FTsampler
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+samp_type <- FT_DF %>%
+  group_by(FTsampType,FTencrVessCode,FTsampler) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(samp_type, aes(x= FTencrVessCode, n_records))+
+  geom_col(aes(fill=FTsampType), color= "black")+
+  facet_grid(FTsampler~.)
+g + theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8)) +  scale_fill_manual(values = combined_palette)
+
+```
+
+#### by FTdepLoc
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+Location_depart <- FT_DF %>%
+  group_by(FTdepLoc) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(Location_depart, aes(x= FTdepLoc, n_records))+
+  geom_col(aes(fill=FTdepLoc), color= "black")
+g + theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8)) +  scale_fill_manual(values = combined_palette)
+
+```
+
+#### by FTarvLoc
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+Location_arrival <- FT_DF %>%
+  group_by(FTarvLoc) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(Location_arrival, aes(x= FTarvLoc, n_records))+
+  geom_col(aes(fill=FTarvLoc), color= "black")
+g + theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8)) +  scale_fill_manual(values = combined_palette)
+
+```
+
+### Overview of fishing trip timeline {.tabset}
+
+Timeline of fishing trips in FT data submitted to the RDBES per FTencrVessCode
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+FT_DF$FTdepDate <- as.POSIXct(FT_DF$FTdepDate)
+FT_DF$FTarvDate <- as.POSIXct(FT_DF$FTarvDate)
+FT_DF$FTencrVessCode <- as.factor(FT_DF$FTencrVessCode)
+
+time_line <- 
+  gg_vistime(FT_DF, 
+             col.event = "FTid", 
+             col.group = "FTencrVessCode",
+             col.start = "FTdepDate", 
+             col.end = "FTarvDate", 
+             show_labels = FALSE) +
+  scale_x_datetime(date_breaks = "1 month", date_labels = "%b") +
+  theme_bw()+
+  labs(y="FTencrVessCode")
+
+print(time_line)
+
+# time_line <- ggplot_build(time_line)
+# time_line$data[[4]]$angle <- 90
+# rebuilt <- ggplot_gtable(time_line)
+# plot(rebuilt)
+
+```
+
+## RDBES FO (Fishing Operation) data
+
+### Overviews number of records {.tabset}
+
+N total FO records: `r sum(FO_DF$n_records)`
+
+N sampled FO records: `r sum(FO_DF$n_records[FO_DF$FOsamp == "Y"])`
+
+N not-sampled FO records: `r sum(FO_DF$n_records[FO_DF$FOsamp == "N"])`
+
+#### by FTid and FOsamp
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=3}
+trip_operation <- FO_DF %>%
+  group_by(FTid,FOsampler, FOsamp) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(trip_operation, aes(x= as.factor(FTid), n_records))+
+  geom_col(aes(fill=FOsamp), color= "black")+ 
+  facet_grid(FOsampler~.)
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="FTid")
+
+```
+
+#### by FOcatReg
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=3.5}
+Catch_registration <- FO_DF %>%
+  group_by(FOcatReg,FOsampler) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(Catch_registration, aes(x= FOcatReg, n_records))+
+  geom_col(aes(fill=FOsampler), color= "black")
+
+g + theme_bw()+ scale_fill_manual(values = combined_palette)
+
+```
+
+#### by FOmetier6
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=3.5}
+metier6 <- FO_DF %>%
+  group_by(FOmetier6, FOsampler) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(metier6, aes(x= FOmetier6, n_records))+
+  geom_col(aes(fill=FOsampler), color= "black")
+
+g + theme_bw()+ scale_fill_manual(values = combined_palette)
+
+```
+
+### FO fishing duration by FOmetier6 and FOsamp  {.tabset}
+
+```{r  FOdur, echo = FALSE,  message=FALSE, warning = FALSE}
+
+myplotsfishingtime <- list()
+for(i in sort(unique(FO_DF$FOmetier6))){
+  myplotsfishingtime[[i]] <- 
+    ggplot(subset(FO_DF, FOmetier6 == i), aes(x= as.factor(FTid), y=as.numeric(FOdur), fill=FOsamp)) + geom_boxplot()+
+     theme_bw()+
+    theme(axis.text.x = element_text(angle=45, hjust=1, size=8)) + 
+    scale_fill_manual(values = combined_palette)+
+     labs(x="FTid", y="FOdur")
+}
+```
+
+```{r FOdurplot, results = "asis", echo = FALSE,  message=FALSE, warning = FALSE}
+for(i in unique(names(myplotsfishingtime))){
+    catHeader(names(myplotsfishingtime[i]),4)
+    lapply(myplotsfishingtime[i], print)
+}
+```
+
+### FO handling time by FOmetier6 and FOsamp {.tabset}
+
+```{r  FOhand, echo = FALSE,  message=FALSE, warning = FALSE}
+
+myplotshandtime <- list()
+for(i in sort(unique(FO_DF$FOmetier6))){
+  myplotshandtime[[i]] <- 
+    ggplot(subset(FO_DF, FOmetier6 == i), aes(x= as.factor(FTid), y=as.numeric(FOhandTime), fill=FOsamp)) + geom_boxplot()+
+     theme_bw()+
+    theme(axis.text.x = element_text(angle=45, hjust=1, size=8)) + 
+    scale_fill_manual(values = combined_palette)+
+    labs(x="FTid", y="FOhandTime")
+}
+```
+
+```{r FOhandplot, results = "asis", echo = FALSE,  message=FALSE, warning = FALSE}
+for(i in unique(names(myplotshandtime))){
+    catHeader(names(myplotshandtime[i]),4)
+    lapply(myplotshandtime[i], print)
+}
+```
+
+### FO Maps by FOmetier6 {.tabset}
+
+```{r  mapFO, include = FALSE,  echo=FALSE, message=FALSE, warning = FALSE}
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world <- st_set_crs(world, 4326)
+
+FO %>% 
+distinct(FOstatRect, FOmetier6, FOsamp) %>% 
+mutate(lon = ices.rect(FOstatRect)$lon,
+       lat = ices.rect(FOstatRect)$lat)-> FOmap
+
+  min.lon<-min(FOmap$lon, na.rm = T)
+  max.lon<-max(FOmap$lon, na.rm = T)
+  min.lat<-min(FOmap$lat, na.rm = T)
+  max.lat<-max(FOmap$lat, na.rm = T)
+  
+  ICESareas_subset <- st_crop(ICESareas, 
+                            c(xmin = min.lon-2, xmax = max.lon+2, ymin = min.lat-2, ymax = max.lat+2))
+
+  
+mapFO <- list()
+for(i in sort(unique(FOmap$FOmetier6))){
+
+  
+  mapFO[[i]] <- 
+    ggplot() +
+    theme_bw() +
+    geom_sf(data=world)+
+    geom_ices_squares(xlim = c(min.lon,max.lon), ylim = c(min.lat,max.lat), linetype = "dotted", colour = "grey30", linewidth = .1) +
+    # geom_sf(data = ICESareas_subset, inherit.aes = FALSE, alpha = 0, color= "black", linewidth = 0.25, drop = TRUE)+
+    geom_point(data = subset(FOmap, FOmetier6 == i), aes(lon, lat), size=2, colour = "red") +
+    coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
+    scale_colour_manual(values = combined_palette)+
+    xlab("Longitude") +
+    ylab("Latitude")
+}
+```
+
+
+```{r mapFOplot, results = "asis", echo = FALSE,  message=FALSE, warning = FALSE}
+for(i in unique(names(mapFO))){
+    catHeader(names(mapFO[i]),4)
+    lapply(mapFO[i], print)
+}
+```
+
+
+## RDBES SS (Species Selection) data
+
+### Overviews number of records by species {.tabset}
+
+N total SS records: `r sum(SS_DF$n_records)`
+
+N discard SS records: `r sum(SS_DF$n_records[SS_DF$SScatchFra=="Dis"])`
+
+N landing SS records: `r sum(SS_DF$n_records[SS_DF$SScatchFra=="Lan"])`
+
+#### by SSobsActTyp and SSsampler
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=3}
+obs_act_type <- SS_DF %>%
+  group_by(SSobsActTyp, SSsampler) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(obs_act_type, aes(x= SSobsActTyp, n_records))+
+  geom_col(aes(fill=SSsampler), color= "black")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()
+
+```
+
+
+#### by SSActTyp and SSsampler
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=3}
+obs_act_type <- SS_DF %>%
+  group_by(SSobsTyp, SSsampler) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(obs_act_type, aes(x= SSobsTyp, n_records))+
+  geom_col(aes(fill=SSsampler), color= "black")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()
+
+```
+
+## RDBES SA (Sample) data
+
+### Overviews number of records by species {.tabset}
+
+N total SA records: `r sum(SA_DF$n_records)`
+
+N discard SA records: `r sum(SA_DF$n_records[SA_DF$SAcatchCat=="Dis"])`
+
+N landing SA records: `r sum(SA_DF$n_records[SA_DF$SAcatchCat=="Lan"])`
+
+```{r, include = FALSE}
+# Find top 10 species according to the SAtotalWtLive
+top20_species <- SA_DF %>%
+  group_by(SAspeCodeFAO ) %>%
+  summarise(totalWtLive=sum(SAtotalWtLive)) %>%
+  arrange(desc(totalWtLive)) %>%
+  top_n(20)
+
+top20_species$Topspecies <- "X"
+SA_DF <- left_join(SA_DF,top20_species,by="SAspeCodeFAO")
+SA_DF$Topspecies <- ifelse(is.na(SA_DF$Topspecies),"OTH",SA_DF$SAspeCodeFAO)
+
+```
+
+#### by SAcatchCat
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+species_catchCat <- SA_DF %>%
+  group_by(Topspecies, SAcatchCat,SApres) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(species_catchCat, aes(x= as.factor(Topspecies), n_records))+
+  geom_col(aes(fill=SApres), color= "black")+
+  facet_grid(SAcatchCat~.)
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="SAspeCodeFAO")
+
+```
+
+#### by SAarea
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+species_area <- SA_DF %>%
+  group_by(Topspecies, SAarea) %>%
+  summarise(n_records=sum(n_records)) 
+
+g <- ggplot(species_area, aes(x= as.factor(Topspecies), n_records))+
+  geom_col(aes(fill=SAarea), color= "black")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="SAspeCodeFAO")
+
+```
+
+#### by SAmetier6
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+species_area <- SA_DF %>%
+  group_by(Topspecies, SAmetier6,SAcatchCat) %>%
+  summarise(n_records=sum(n_records)) %>%
+  arrange(desc(n_records))
+
+g <- ggplot(species_area, aes(x= as.factor(Topspecies), n_records))+
+  geom_col(aes(fill=SAcatchCat), color= "black")+
+  facet_grid(SAmetier6 ~., scales = "free_y")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="SAspeCodeFAO")
+
+```
+
+#### by SAunitType
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+unitType <- SA_DF %>%
+  group_by(Topspecies, SAunitType, SAcatchCat) %>%
+  summarise(n_records=sum(n_records)) %>%
+  arrange(desc(n_records))
+
+g <- ggplot(unitType, aes(x= as.factor(Topspecies), n_records))+
+  geom_col(aes(fill=SAcatchCat), color= "black")+
+  facet_grid(SAunitType ~., scales = "free_y")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="SAspeCodeFAO")
+
+```
+
+### SA table top 20 species (rest grouped in OTH group) {.tabset}
+
+#### SA total vs sampled live weight by catch category 
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+SALiveWt <- SA_DF %>%
+  group_by(Topspecies,SAcatchCat) %>%
+  filter(SAunitType == "Weight") %>% 
+  summarise(SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+            SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE )) %>%
+  gather(SAWtSource, SAWtLive, -c(Topspecies,SAcatchCat))
+
+
+ggplot(SALiveWt, aes(reorder(Topspecies, -SAWtLive), SAWtLive, fill = SAWtSource)) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  facet_grid(SAcatchCat~., scales = "free_y")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  xlab("topCLSpecies")+
+  scale_fill_manual(values = combined_palette)
+
+```
+
+#### SA Live vs Measured total weight by catch category 
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+SAweightTotal <- SA_DF %>%
+  group_by(Topspecies,SAcatchCat) %>%
+  filter(SAunitType == "Weight") %>% 
+  summarise(SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+            SAtotalWtMes = sum(SAtotalWtMes, na.rm = TRUE )) %>%
+  gather(SAWtSampVst, SAWtotal, -c(Topspecies,SAcatchCat))
+
+
+ggplot(SAweightTotal, aes(reorder(Topspecies, -SAWtotal), SAWtotal, fill = SAWtSampVst)) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  facet_grid(SAcatchCat~., scales = "free_y")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  xlab("topCLSpecies")+
+  scale_fill_manual(values = combined_palette)
+
+```
+
+
+#### SA Live vs Measured  sampled weight by catch category 
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+SAweightsamp <- SA_DF %>%
+  group_by(Topspecies,SAcatchCat) %>%
+  filter(SAunitType == "Weight") %>% 
+  summarise(SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE),
+            SAsampWtMes = sum(SAsampWtMes, na.rm = TRUE )) %>%
+  gather(SAWtSource, SAWsamp, -c(Topspecies,SAcatchCat))
+
+
+ggplot(SAweightsamp, aes(reorder(Topspecies, -SAWsamp), SAWsamp, fill = SAWtSource)) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  facet_grid(SAcatchCat~., scales = "free_y")+
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust=1))+
+  xlab("topCLSpecies")+
+  scale_fill_manual(values = combined_palette)
+
+```
+
+#### SA total live weight by area
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+
+SAWtTotalArea <- SA_DF %>%
+  group_by(Topspecies, SAarea) %>%
+  summarise(SAtotalWtLive = sum(SAtotalWtLive))
+
+SAWtTotalArea <- SAWtTotalArea %>%
+  group_by(Topspecies) %>%
+  mutate(TotW = sum(SAtotalWtLive))
+
+ggplot(SAWtTotalArea, aes(reorder(Topspecies, -TotW), SAtotalWtLive, fill = SAarea)) +
+  geom_bar(position = "stack", stat = "identity", color = "black") +
+  scale_fill_manual(values = combined_palette) +  # Set the combined color scale
+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  xlab("topCLSpecies")
+
+```
+
+#### SA sampled live weight by area
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+
+SAWtSampledArea <- SA_DF %>%
+  group_by(Topspecies, SAarea) %>%
+  summarise(SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE))
+
+SAWtSampledArea <- SAWtSampledArea %>%
+  group_by(Topspecies) %>%
+  mutate(TotW = sum(SAsampWtLive, na.rm = TRUE))
+
+ggplot(SAWtSampledArea, aes(reorder(Topspecies, -TotW), SAsampWtLive, fill = SAarea)) +
+  geom_bar(position = "stack", stat = "identity", color = "black") +
+  scale_fill_manual(values = combined_palette) +  # Set the combined color scale
+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  xlab("topCLSpecies")
+
+
+```
+
+#### SA sampled live weight by presentation
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+
+SAWtSampledPres <- SA_DF %>%
+  group_by(Topspecies, SApres) %>%
+  summarise(SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE))
+
+SAWtSampledPres <- SAWtSampledPres %>%
+  group_by(Topspecies) %>%
+  mutate(TotW = sum(SAsampWtLive, na.rm = TRUE))
+
+ggplot(SAWtSampledPres, aes(reorder(Topspecies, -TotW), SAsampWtLive, fill = SApres)) +
+  geom_bar(position = "stack", stat = "identity", color = "black") +
+  scale_fill_manual(values = combined_palette) +  # Set the combined color scale
+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  xlab("topCLSpecies")
+
+
+```
+
+### SA total live weight vs sampled live weight {.tabset}
+
+```{r  SATotWtLivevsmeas, echo=FALSE, message=FALSE, warning = FALSE}
+
+myplotsTotWt <- list()
+for(i in sort(unique(SA_DF$Topspecies))){
+myplotsTotWt[[i]] <- 
+  ggplot(subset(SA_DF, Topspecies == i), aes(x = SAtotalWtLive , y =SAsampWtLive )) +
+  geom_point() +
+  geom_abline(intercept = 0, slope = 1, linetype = "dashed", color = "red") +  # Add line with slope = 1
+  theme_bw()
+}
+
+```
+
+```{r CLoffWeightValplotSP, results = "asis", warning = FALSE, echo=FALSE,}
+
+for(i in unique(names(myplotsTotWt))) {
+  catHeader(names(myplotsTotWt[i]), 4)
+  if (sum(myplotsTotWt[[i]]$data$SAsampWtLive,na.rm = TRUE) == 0) {
+    cat(paste0("No ",i, " samples in SA data submitted to the RDBES"))
+  } else {
+    lapply(myplotsTotWt[i], print)
+  }
+}
+```
+
+### SA live weight by species maps {.tabset}
+
+```{r  SAWtSp, include=FALSE}
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world <- st_set_crs(world, 4326)
+
+SAMap <-SA_DF %>%
+  filter(SAstatRect != '-9', SAunitType=="Weight") %>%
+  group_by(SAstatRect, Topspecies) %>%
+  summarise(
+    lon = first(ices.rect(SAstatRect)$lon),
+    lat = first(ices.rect(SAstatRect)$lat),
+    SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+    SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE)
+  ) %>%
+  gather(key = "WeightType", value = "WtLive", SAtotalWtLive, SAsampWtLive)%>%
+  mutate(WtLive= case_when(WtLive==0~NA,
+                           TRUE~WtLive))
+
+myplotsMap <- list()
+for(i in sort(unique(SAMap$Topspecies))){
+  min.lon<-min(SAMap$lon, na.rm = T)
+  max.lon<-max(SAMap$lon, na.rm = T)
+  min.lat<-min(SAMap$lat, na.rm = T)
+  max.lat<-max(SAMap$lat, na.rm = T)
+  myplotsMap[[i]] <-   ggplot() +
+  theme_bw() +
+  geom_sf(data = world) +
+  geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat), linetype = "dotted", colour = "grey30", linewidth = 0.1) +
+  # geom_sf(data = ICESareas_subset, inherit.aes = FALSE, alpha = 0, color= "black", linewidth = 0.25, drop = TRUE)+
+  coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
+  geom_point(data = subset(SAMap, Topspecies == i), aes(lon, lat, size = WtLive), colour = "red") +
+  facet_grid(.~WeightType) +
+  scale_size_continuous() +  # Adjust size scale based on Weight
+  xlab("Longitude") +
+  ylab("Latitude")
+
+}
+```
+
+```{r SAWtSpMap, results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsMap))){
+    catHeader(names(myplotsMap[i]),4)
+    lapply(myplotsMap[i], print)
+}
+```
+
+
+### SA live weight by species per area {.tabset}
+
+
+```{r  SAWtSpArea, echo=FALSE, message=FALSE, warning = FALSE}
+
+SA_DF_Wt_Sp <-SA_DF %>%
+  filter(SAunitType=="Weight") %>%
+  group_by(Topspecies, StockKeyLabel) %>%
+  summarise(
+    SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+    SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE)
+  ) %>%
+  gather(key = "WeightType", value = "WtLive", SAtotalWtLive, SAsampWtLive)
+
+
+myplotsWtArea <- list()
+for(i in sort(unique(SA_DF_Wt_Sp$Topspecies))){
+myplotsWtArea[[i]] <- 
+  ggplot(subset(SA_DF_Wt_Sp, Topspecies == i), aes(x = StockKeyLabel, y=WtLive,  fill= WeightType )) +
+  geom_bar(position="dodge", stat="identity", color="black") +  
+  scale_fill_manual(values = combined_palette) +
+  theme_bw() + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+}
+
+rm(SA_DF_Wt_Sp)
+```
+
+```{r SAWtSpAreaPlot, results = "asis", warning = FALSE, echo=FALSE, fig.height=5}
+
+for(i in unique(names(myplotsWtArea))) {
+  catHeader(names(myplotsWtArea[i]), 4)
+    lapply(myplotsWtArea[i], print)
+  }
+
+```
+
+
+### SA live weight by metier maps {.tabset}
+
+```{r  SAWtMetier, include=FALSE}
+
+world <- ne_countries(scale = "medium", returnclass = "sf")
+world <- st_set_crs(world, 4326)
+
+SAMap <-SA_DF %>%
+  filter(SAstatRect != '-9', SAunitType=="Weight") %>%
+  group_by(SAstatRect, SAmetier6) %>%
+  summarise(
+    lon = first(ices.rect(SAstatRect)$lon),
+    lat = first(ices.rect(SAstatRect)$lat),
+    SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+    SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE)
+  ) %>%
+  gather(key = "WeightType", value = "WtLive", SAtotalWtLive, SAsampWtLive)%>%
+  mutate(WtLive= case_when(WtLive==0~NA,
+                           TRUE~WtLive))
+
+myplotsMap <- list()
+for(i in sort(unique(SAMap$SAmetier6))){
+  min.lon<-min(SAMap$lon, na.rm = T)
+  max.lon<-max(SAMap$lon, na.rm = T)
+  min.lat<-min(SAMap$lat, na.rm = T)
+  max.lat<-max(SAMap$lat, na.rm = T)
+  myplotsMap[[i]] <-   ggplot() +
+  theme_bw() +
+  geom_sf(data = world) +
+  geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat), linetype = "dotted", colour = "grey30", linewidth = 0.1) +
+  # geom_sf(data = ICESareas_subset, inherit.aes = FALSE, alpha = 0, color= "black", linewidth = 0.25, drop = TRUE)+
+  coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
+  geom_point(data = subset(SAMap, SAmetier6 == i), aes(lon, lat, size = WtLive), colour = "red") +
+  facet_grid(.~WeightType) +
+  scale_size_continuous() +  # Adjust size scale based on Weight
+  xlab("Longitude") +
+  ylab("Latitude")
+
+}
+```
+
+```{r SAWtMetierMap, results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsMap))){
+    catHeader(names(myplotsMap[i]),4)
+    lapply(myplotsMap[i], print)
+}
+```
+
+
+### SA live weight by metier per area {.tabset}
+
+
+```{r  SAWtMetierArea, echo=FALSE, message=FALSE, warning = FALSE}
+
+SA_DF_Wt <-SA_DF %>%
+  filter(SAunitType=="Weight") %>%
+  group_by(SAmetier6, SAarea) %>%
+  summarise(
+    SAtotalWtLive = sum(SAtotalWtLive, na.rm = TRUE),
+    SAsampWtLive = sum(SAsampWtLive, na.rm = TRUE)
+  ) %>%
+  gather(key = "WeightType", value = "WtLive", SAtotalWtLive, SAsampWtLive)
+
+
+myplotsWtArea <- list()
+for(i in sort(unique(SA_DF_Wt$SAmetier6))){
+myplotsWtArea[[i]] <- 
+  ggplot(subset(SA_DF_Wt, SAmetier6 == i), aes(x = SAarea, y=WtLive,  fill= WeightType )) +
+  geom_bar(position="dodge", stat="identity", color="black") + 
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +  
+  scale_fill_manual(values = combined_palette) +
+  theme_bw()
+}
+
+```
+
+```{r SAWtMetierAreaPlot, results = "asis", warning = FALSE, echo=FALSE, fig.height=5}
+
+for(i in unique(names(myplotsWtArea))) {
+  catHeader(names(myplotsWtArea[i]), 4)
+    lapply(myplotsWtArea[i], print)
+  }
+
+```
+
+## RDBES FM (Frequency Measure) data
+
+### Overviews number of records by species {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+FM_SA_DF <- left_join (SA_DF,FM_DF,by = "SAid") %>% 
+  filter(!is.na(FMid))
+```
+
+N total FM records: `r sum(FM_SA_DF$FMnumAtUnit, na.rm=TRUE)`
+
+N discard FM records: `r sum(FM_SA_DF$FMnumAtUnit[FM_SA_DF$SAcatchCat=="Dis"], na.rm=TRUE)`
+
+N landing FM records: `r sum(FM_SA_DF$FMnumAtUnit[FM_SA_DF$SAcatchCat=="Lan"], na.rm=TRUE)`
+
+
+
+```{r, include = FALSE}
+# Find top 10 species according to the SAtotalWtLive
+top20_species <- FM_SA_DF %>%
+  group_by(SAspeCodeFAO) %>%
+  summarise(FMnumAtUnitTotal= sum(FMnumAtUnit, na.rm = TRUE)) %>%
+  arrange(desc(FMnumAtUnitTotal)) %>%
+  top_n(20)
+
+top20_species$FM_SATop20species <- "X"
+FM_SA_DF <- left_join(FM_SA_DF,top20_species,by="SAspeCodeFAO")
+FM_SA_DF$FM_SATop20species <- ifelse(is.na(FM_SA_DF$FM_SATop20species),"OTH",FM_SA_DF$SAspeCodeFAO)
+
+```
+
+### Length frequency distribution by SAspeCodeFAO and SAcatchCat {.tabset}
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+FM_SA_DF_count <- FM_SA_DF %>% 
+  group_by(FM_SATop20species, SAcatchCat, StockKeyLabel) %>% 
+  summarise(FM_count = sum (FMnumAtUnit, na.rm = TRUE))%>% 
+  pivot_wider(names_from = SAcatchCat, values_from=FM_count)%>% 
+  rename(Discard = Dis,
+         Landing = Lan)
+
+	DT::datatable(FM_SA_DF_count, filter = 'top')
+```
+
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+
+length_dist_spec_cat <- FM_SA_DF %>%
+  filter(FM_SA_DF$FMtypeMeas == "LengthTotal") %>% 
+  group_by(FM_SATop20species, FMclassMeas, SAcatchCat,StockKeyLabel) %>%
+  summarise(FMnumAtUnit = sum(FMnumAtUnit)) 
+
+myplotsLengthfreq <- list()
+summary_list<- list()
+
+for(i in sort(unique(length_dist_spec_cat$FM_SATop20species))) {
+  
+  summary <- length_dist_spec_cat %>%
+    filter(FM_SATop20species == i) %>%
+    group_by(StockKeyLabel, SAcatchCat) %>%
+    summarise(median = median(FMclassMeas, na.rm = TRUE),
+              min = min(FMclassMeas, na.rm = TRUE),
+              max = max(FMclassMeas, na.rm = TRUE))
+
+  
+  summary_list[[i]] <- summary
+  
+  myplotsLengthfreq[[i]] <- 
+    ggplot(data = subset(length_dist_spec_cat, FM_SATop20species == i), aes(x = FMclassMeas, fill = SAcatchCat)) +
+    geom_histogram(aes(y = FMnumAtUnit), stat = "identity", color = "black") +
+    geom_vline(data = summary, aes(xintercept = median, color = SAcatchCat), linetype = "dashed",show.legend = NA) +
+    facet_wrap(StockKeyLabel~., ncol = 2)+
+    scale_fill_manual(values = combined_palette) +
+    scale_color_manual(values = combined_palette) +
+    theme_bw()
+}
+
+
+```
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsLengthfreq))) {
+  catHeader(names(myplotsLengthfreq[i]), 4)
+  if (sum(myplotsLengthfreq[[i]]$data$FMnumAtUnit, na.rm = TRUE) == 0) {
+    cat(paste0("No ",i, " samples in FM data submitted to the RDBES\n"))
+  } else {
+
+    print(summary_list[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+
+    cat("\n")
+    
+    lapply(myplotsLengthfreq[i], print)
+  }
+}
+
+```
+
+
+## RDBES BV (Biological Variable) data
+
+### Overviews number of records by species {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+BV_SA_DF <- left_join (SA_DF,BV_DF,by = "SAid") %>% 
+  filter(!is.na(BVid))
+```
+
+N total BV records: `r sum(BV_SA_DF$BVnumTotal, na.rm=TRUE)`
+
+N discard BV records: `r sum(BV_SA_DF$BVnumTotal[BV_SA_DF$SAcatchCat=="Dis"], na.rm=TRUE)`
+
+N landing BV records: `r sum(BV_SA_DF$BVnumTotal[BV_SA_DF$SAcatchCat=="Lan"], na.rm=TRUE)`
+
+#### by BVtypeMeas {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE, fig.height=5}
+TypeMeas_Spec <- BV_SA_DF %>%
+  group_by(SAspeCodeFAO, BVtypeMeas, SAcatchCat) %>%
+  summarise(BVnumTotal=sum(BVnumTotal)) %>%
+  arrange(desc(BVnumTotal))
+
+g <- ggplot(TypeMeas_Spec, aes(x= SAspeCodeFAO, BVnumTotal))+
+  geom_col(aes(fill=SAcatchCat), position= "dodge", color= "black")+
+  facet_grid(BVtypeMeas ~., scales = "free_y")
+
+g + scale_fill_manual(values = combined_palette)+ theme_bw()+ theme(axis.text.x = element_text(angle=45, hjust=1, size=8))+labs(x="SAspeCodeFAO")
+
+```
+
+### Overview per measured variable {.tabset}
+
+#### Lengths {.tabset}
+
+##### Overview Table
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+BV_SA_DF_Length_count <- BV_SA_DF %>%
+  filter(BVtypeMeas =="LengthTotal")%>% 
+  group_by(SAspeCodeFAO, SAcatchCat, SAarea) %>% 
+  summarise(BM_count = sum (BVnumTotal, na.rm = TRUE))%>% 
+  pivot_wider(names_from = SAcatchCat, values_from=BM_count)%>% 
+  rename(Discard = Dis,
+         Landing = Lan)
+
+	DT::datatable(BV_SA_DF_Length_count, filter = 'top')
+	rm(BV_SA_DF_Length_count)
+```
+
+##### Length frequency per species, stock and catch category {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+
+length_dist_spec_cat <- BV_SA_DF %>%
+  filter(BVtypeMeas =="LengthTotal")%>%
+  group_by(SAspeCodeFAO, StockKeyLabel, BVvalueMeas, SAcatchCat) %>%
+  summarise(BVnumTotal = sum(BVnumTotal)) 
+
+myplotsLengthfreq_BV <- list()
+summary_BV_length <- list()
+
+for(i in sort(unique(length_dist_spec_cat$SAspeCodeFAO))) {
+  summary_BV_length[[i]] <- length_dist_spec_cat %>%
+    filter(SAspeCodeFAO == i) %>%
+    group_by(StockKeyLabel, SAcatchCat) %>%
+    summarise(n=sum(BVnumTotal, na.rm = TRUE),
+              median = median(as.numeric(BVvalueMeas), na.rm = TRUE),
+              min = min(as.numeric(BVvalueMeas), na.rm = TRUE),
+              max = max(as.numeric(BVvalueMeas), na.rm = TRUE))
+
+  myplotsLengthfreq_BV[[i]] <- 
+    ggplot(data = subset(length_dist_spec_cat, SAspeCodeFAO == i), aes(x = as.numeric(BVvalueMeas), fill = SAcatchCat)) +
+    geom_histogram(aes(y = BVnumTotal), stat = "identity", color = "black") +
+    geom_vline(data = summary_BV_length[[i]], aes(xintercept = median, color = SAcatchCat), linetype = "dashed",show.legend = NA) +
+    facet_wrap(.~StockKeyLabel, ncol = 2)+
+    scale_fill_manual(values = combined_palette) +
+    scale_color_manual(values = combined_palette) +
+    labs (x="BVvalueMeas")+
+    theme_bw()
+}
+rm(length_dist_spec_cat)
+
+```
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsLengthfreq_BV))) {
+  catHeader(names(myplotsLengthfreq_BV[i]), 6)
+      cat("\n")
+      
+    print(summary_BV_length[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+
+
+    cat("\n")
+    
+    lapply(myplotsLengthfreq_BV[i], print)
+
+}
+```
+
+
+#### Ages {.tabset}
+
+##### Overview Table
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+BV_SA_DF_Age_count <- BV_SA_DF %>%
+  filter(BVtypeMeas =="Age")%>% 
+  group_by(SAspeCodeFAO, SAcatchCat, SAarea) %>% 
+  summarise(BM_count = sum (BVnumTotal, na.rm = TRUE))%>% 
+  pivot_wider(names_from = SAcatchCat, values_from=BM_count)%>% 
+  rename(Discard = Dis,
+         Landing = Lan)
+
+	DT::datatable(BV_SA_DF_Age_count, filter = 'top')
+	
+	rm(BV_SA_DF_Age_count)
+```
+
+##### Age frequency per species, stock and catch category {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+
+age_dist_spec_cat <- BV_SA_DF %>%
+  filter(BVtypeMeas =="Age")%>%
+  group_by(SAspeCodeFAO,StockKeyLabel, BVvalueMeas, SAcatchCat) %>%
+  summarise(BVnumTotal = sum(BVnumTotal)) 
+
+myplotsAgefreq_BV <- list()
+summary_BV_Age <- list()
+
+for(i in sort(unique(age_dist_spec_cat$SAspeCodeFAO))) {
+  
+  summary_BV_Age[[i]] <- age_dist_spec_cat %>%
+    filter(SAspeCodeFAO == i) %>%
+    group_by(StockKeyLabel,SAcatchCat) %>%
+    summarise(n=sum(BVnumTotal, na.rm = TRUE),
+              median = median(as.numeric(BVvalueMeas), na.rm = TRUE),
+      min = min(as.numeric(BVvalueMeas), na.rm = TRUE),
+      max = max(as.numeric(BVvalueMeas), na.rm = TRUE))
+
+  myplotsAgefreq_BV[[i]] <- 
+    ggplot(data = subset(age_dist_spec_cat, SAspeCodeFAO == i), aes(x = as.numeric(BVvalueMeas), fill = SAcatchCat)) +
+    geom_histogram(aes(y = BVnumTotal), stat = "identity", color = "black") +
+    geom_vline(data = summary_BV_Age[[i]], aes(xintercept = median, color = SAcatchCat), linetype = "dashed",show.legend = NA) +
+    facet_wrap(.~StockKeyLabel, ncol =  2)+
+    scale_fill_manual(values = combined_palette) +
+    scale_color_manual(values = combined_palette) +
+    labs (x="BVvalueMeas")+
+    theme_bw()
+}
+```
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsAgefreq_BV))) {
+  catHeader(names(myplotsAgefreq_BV[i]), 6)
+  
+    print(summary_BV_Age[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+    cat("\n")
+    
+    lapply(myplotsAgefreq_BV[i], print)
+
+}
+```
+
+
+#### Weights  {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+BV_SA_DF1 <- BV_SA_DF %>%
+  mutate(BVvalueMeas = case_when(
+    BVtypeMeas == "WeightLive" ~ round(as.numeric(BVvalueMeas) / 100) * 100,
+    TRUE ~ as.numeric(BVvalueMeas)
+  ))
+```
+
+##### Overview Table
+
+```{r, echo=FALSE, message=FALSE, warning = FALSE}
+BV_SA_DF_Weight_count <- BV_SA_DF1 %>%
+  filter(BVtypeMeas =="WeightLive")%>%
+  group_by(SAspeCodeFAO, SAcatchCat, SAarea) %>% 
+  summarise(BVnumTotal = sum (BVnumTotal, na.rm = TRUE))%>% 
+  pivot_wider(names_from = SAcatchCat, values_from=BVnumTotal)%>% 
+  rename(Discard = Dis,
+         Landing = Lan)
+
+	DT::datatable(BV_SA_DF_Weight_count, filter = 'top')
+	
+	rm(BV_SA_DF_Weight_count)
+```
+
+##### Weight frequency per species, stock and catch category {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+
+wt_dist_spec_cat <- BV_SA_DF1 %>%
+  filter(BVtypeMeas =="WeightLive")%>%
+  group_by(SAspeCodeFAO,StockKeyLabel, BVvalueMeas, SAcatchCat) %>%
+  summarise(BVnumTotal = sum(BVnumTotal)) 
+
+myplotsWtfreq_BV <- list()
+summary_BV_Wt <- list()
+
+for(i in sort(unique(BV_SA_DF1$SAspeCodeFAO))) {
+  
+  summary_BV_Wt[[i]] <- wt_dist_spec_cat %>%
+    filter(SAspeCodeFAO == i) %>%
+    group_by(StockKeyLabel, SAcatchCat) %>%
+    summarise(n=sum(BVnumTotal, na.rm = TRUE),
+              median = median(as.numeric(BVvalueMeas), na.rm = TRUE),
+      min = min(as.numeric(BVvalueMeas), na.rm = TRUE),
+      max = max(as.numeric(BVvalueMeas), na.rm = TRUE))
+
+myplotsWtfreq_BV[[i]] <- 
+  ggplot(data = subset(wt_dist_spec_cat, SAspeCodeFAO == i), aes(x = as.numeric(BVvalueMeas), fill = SAcatchCat)) +
+    geom_histogram(aes(y = BVnumTotal), stat = "identity", color = "black") +
+    geom_vline(data = summary_BV_Wt[[i]], aes(xintercept = median, color = SAcatchCat), linetype = "dashed", show.legend = NA) +
+    facet_wrap(.~StockKeyLabel, ncol = 2)+
+    scale_fill_manual(values = combined_palette) +
+    scale_color_manual(values = combined_palette) +
+    labs(x = "BVvalueMeas") +
+    theme_bw()
+
+}
+```
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsWtfreq_BV))) {
+  catHeader(names(myplotsWtfreq_BV[i]), 6)
+  
+    print(summary_BV_Wt[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+
+    cat("\n")
+    
+    lapply(myplotsWtfreq_BV[i], print)
+
+}
+```
+
+
+## Overview combined variables {.tabset}
+
+#### Length-Weight {.tabset}
+
+##### Length-Weight per species, stock and catch category {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+
+BV_SA_PIV<- BV_SA_DF %>%
+  select(BVfishId,SAspeCodeFAO, SAcatchCat, StockKeyLabel, BVtypeMeas, BVvalueMeas) %>% 
+  mutate(BVvalueMeas=as.numeric(BVvalueMeas)) %>% 
+  pivot_wider(id_cols=c(BVfishId,SAspeCodeFAO, SAcatchCat,StockKeyLabel), names_from = BVtypeMeas, values_from = BVvalueMeas)
+  
+# Define a function to calculate a and b parameters
+calculate_parameters <- function(data) {
+  lm_model <- lm(log(WeightLive/10) ~ log(LengthTotal/10), data = data)
+  a <- exp(coef(lm_model)[1])
+  b <- coef(lm_model)[2]
+  return(c(a = a, b = b))
+}
+# Create an empty list to store plots
+myplotsLnVSWt <- list()
+parameters_list <- list()
+# Loop over unique species codes
+for (i in sort(unique(BV_SA_DF1$SAspeCodeFAO))) {
+  # Subset the data for the current species code
+  subset_data <- subset(BV_SA_PIV, SAspeCodeFAO == i) %>% 
+    filter(!is.na(LengthTotal), !is.na(WeightLive))
+  
+  parameters_df <- data.frame( SAcatchCat =as.character(),
+                               StockKeyLabel = as.character(),
+                               a = as.numeric(),
+                               b = as.numeric())
+  
+  for (j in sort(unique(subset_data$StockKeyLabel))) {
+    subset_data_area <- subset(subset_data, StockKeyLabel == j) 
+  
+  for (x in sort(unique(subset_data_area$SAcatchCat))) {
+    subset_data_area_cat <- subset(subset_data_area, SAcatchCat == x)   
+    
+  # Calculate parameters
+  parameters <- calculate_parameters(subset_data_area_cat)
+  
+  
+  # Store parameters in a dataframe
+  parameters_row <- data.frame(StockKeyLabel = j,
+                               SAcatchCat = x,
+                               n= nrow(subset_data_area_cat),
+                               a = round(parameters[1],4),
+                               b = round(parameters[2],4))
+  
+  rownames(parameters_row) <- NULL
+  
+  parameters_df <- rbind(parameters_df, parameters_row)
+  
+  
+  } }
+  
+  # Append to the list
+  parameters_list[[i]] <- parameters_df 
+
+  # Create plot
+myplotsLnVSWt[[i]] <- ggplot(data = subset_data, aes(x = LengthTotal/10, y = WeightLive/10, color = SAcatchCat)) +
+    geom_point(alpha=0.8) +
+    facet_wrap(. ~ StockKeyLabel, scales = "free_y", ncol = 2) +
+    scale_color_manual(values = combined_palette) +
+    theme_bw()+
+    labs(x ="Length Total", y= "Weight Live")
+}
+
+
+```
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsLnVSWt))) {
+  
+  catHeader(names(myplotsLnVSWt[i]), 6)
+  
+      print(parameters_list[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+        cat("\n")
+        
+  print(myplotsLnVSWt[[i]])
+  
+}
+```
+
+#### Length-Age {.tabset}
+
+##### Length-Age per species, stock and catch category {.tabset}
+
+```{r echo=FALSE, message=FALSE, warning = FALSE}
+
+
+myplotsLnVSAge <- list()
+parameters_list <- list()
+
+# Loop over unique species codes
+for (i in sort(unique(BV_SA_DF1$SAspeCodeFAO))) {
+  # Subset the data for the current species code
+  subset_data <- subset(BV_SA_PIV, SAspeCodeFAO == i) %>% 
+    filter(!is.na(Age), !is.na(WeightLive))%>%
+    group_by(SAspeCodeFAO, SAcatchCat, StockKeyLabel, LengthTotal, Age) %>%
+    summarize(count = n()) %>%
+    ungroup()
+  
+  parameters_df <- data.frame( SAcatchCat =as.character(),
+                               StockKeyLabel = as.character(),
+                               a = as.numeric(),
+                               b = as.numeric())
+  
+  for (j in sort(unique(subset_data$StockKeyLabel))) {
+    subset_data_area <- subset(subset_data, StockKeyLabel == j) 
+  
+  for (x in sort(unique(subset_data_area$SAcatchCat))) {
+    subset_data_area_cat <- subset(subset_data_area, SAcatchCat == x)   
+    
+
+  
+  # Store parameters in a dataframe
+  parameters_row <- data.frame(StockKeyLabel = j,
+                               SAcatchCat = x,
+                               n= nrow(subset_data_area_cat))
+  
+  rownames(parameters_row) <- NULL
+  
+  parameters_df <- rbind(parameters_df, parameters_row)
+  
+  } }
+  
+  # Append to the list
+  parameters_list[[i]] <- parameters_df 
+  
+  # Create plot
+myplotsLnVSAge[[i]] <- ggplot(data = subset_data, aes(x = LengthTotal, y = Age, color = SAcatchCat)) +
+  geom_point(aes(size=count), alpha = 0.8) +
+  facet_wrap(. ~ StockKeyLabel, scales = "free_y") +
+  scale_color_manual(values = combined_palette) +
+  scale_size_continuous(range = c(1, 10)) +  # Adjust the range as needed
+  theme_bw()
+
+}
+
+```
+
+
+```{r results = "asis", echo=FALSE, warning=FALSE}
+
+for(i in unique(names(myplotsLnVSAge))) {
+  
+  catHeader(names(myplotsLnVSAge[i]), 6)
+
+        print(parameters_list[[i]] %>% kable(align = "c", format = "html")%>%
+  kable_styling())
+        cat("\n")
+        
+  print(myplotsLnVSAge[[i]])
+  
+
+}
+```
+
+
+
+
+
