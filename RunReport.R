@@ -3,21 +3,25 @@
 # You need to define the parameters
 # Year: single or multiple years
 # Region: all regions or specific areas 
-# Printcode: If you want the code to be printed along the document, default = FALSE
 # File: Paths to the files you want to import 
+# eurostat: if TRUE it fetches the catches in all fishing regions by country to compare the total weight
 
 
 
 
 rmarkdown::render("RDBESNationalQualityReport.Rmd", params = list(
   
-  year = c(2017, 2018),
+  year = c(2017, 2018), # Keep this or just use the years present in the dataset? 
   
-  region = "Asia", # Choices correspond to RCG - NAtl, Baltic, NSea, 
+  region = "", # Choices will correspond to RCG codes, ignore for now needs further development
   
-  printcode = FALSE,
+  file = c("./HCL_2024_02_20_110233.zip", "./HCL_2024_02_20_110234.zip","./HCE_2024_02_20_110348.zip", "./HCE_2024_02_20_110349.zip"),
   
-  file = c("./HCL_2024_02_20_110233.zip", "./HCL_2024_02_20_110234.zip","./HCE_2024_02_20_110348.zip", "./HCE_2024_02_20_110349.zip")
+  eurostat = TRUE,
+  
+  prelcatchstat = FALSE, # TRUE is not working need to give file 
+  
+  fleetRegister = FALSE # TRUE is not working need to give file
   
 ))
 

@@ -4,8 +4,10 @@ output: html_document
 params:
   year: year
   region: region
-  printcode: FALSE
   file: file
+  eurostat: eurostat
+  prelcatchstat: prelcatchstat
+  fleetRegister: fleetRegister
 ---
 
 ```{r setup, include=FALSE}
@@ -15,8 +17,10 @@ options(scipen=999)
 
 ```{r}
 # Packages 
+# TODO add automatic install for packages if they do not exist 
 library(icesVocab)
 library(tidyverse)
+library(eurostat)
 # library(RDBEScore)
 ```
 
@@ -32,18 +36,47 @@ title: National quality report for year(s) `r params$year`
 
 
 ```{r}
-# Read files 
+# Read RDBES CL, CE files 
 # df <- createRDBESDataObject(params$file) # overwrites if given multiple zip files with the same tables
 # check what happens if all years are in one zip folder when time series are uploaded 
 # For now use this 
 df <- read.rdbes(file)
 CL <- as.data.frame(df[1])
 CE <- as.data.frame(df[2])
+```
+
+```{r, eval = params$eurostat}
+# Auxiliary information for comparisons 
+# 1. Eurostat data 
+eurostat <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
+# https://ec.europa.eu/eurostat/databrowser/view/tag00076/default/table?lang=en&category=t_fish
+head(eurostat)
+```
+
+```{r}
+# 2. ICES preliminary catches
+# Need to download the zip(s) from ICES? can it be fetched otherwise? I only see 2021 - 2022 prel catch statistics in the ices web 
+
+
 
 ```
 
 ```{r}
+# 3. Fleet register 
+# The fleet data in the eurostat datasets are not clear. Could they be used 
+```
+
+
+```{r}
 # Processing 
+# Get scientific name
+ScName <- getCodeList("SpecWorms") %>%
+  select(Description, Key)
+CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key")) 
+```
+
+```{r}
+# Merge CL, CE tables 
 
 
 ```

@@ -28,6 +28,21 @@ read.rdbes <- function(file){
     CE <- read.table(unz(CEfiles, "CommercialEffort.csv"), header=T,  sep=",")
   }
   
+  # Character 
+  CL$CLyear <- as.character(CL$CLyear)
+  CE$CEyear <- as.character(CE$CEyear)
+  # Create factors of variables for plots 
+  # Month 
+  CL$CLmonth <- factor(CL$CLmonth, levels = as.character(c(1:12)))
+  CE$CEmonth <- factor(CE$CEmonth, levels = as.character(c(1:12)))
+  # Quarter 
+  CL$CLquarter <- factor(CL$CLquarter, levels = as.character(c(1:4)))
+  CE$CEquarter <- factor(CE$CEquarter, levels = as.character(c(1:4)))
+  # Vessel length category 
+  CL$CLvesselLengthCategory <- factor(CL$CLvesselLengthCategory, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
+  CE$CEvesselLengthCategory <- factor(CE$CEvesselLengthCategory, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
+  
+  
   return(list(CL,CE))
   
 }
