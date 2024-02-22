@@ -1,0 +1,56 @@
+---
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+params:
+  year: year
+  region: region
+  printcode: FALSE
+  file: file
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+options(scipen=999)
+```
+
+```{r}
+# Packages 
+library(icesVocab)
+library(tidyverse)
+# library(RDBEScore)
+```
+
+
+```{r}
+# Functions 
+source("./Functions/read.rdbes.R")
+```
+
+---
+title: National quality report for year(s) `r params$year`
+---
+
+
+```{r}
+# Read files 
+# df <- createRDBESDataObject(params$file) # overwrites if given multiple zip files with the same tables
+# check what happens if all years are in one zip folder when time series are uploaded 
+# For now use this 
+df <- read.rdbes(file)
+CL <- as.data.frame(df[1])
+CE <- as.data.frame(df[2])
+
+```
+
+```{r}
+# Processing 
+
+
+```
+
+
+# CL 
+
+# CE
+
+# CL & CE 
