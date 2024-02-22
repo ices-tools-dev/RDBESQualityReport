@@ -5,7 +5,8 @@
 # Region: all regions or specific areas 
 # File: Paths to the files you want to import 
 # eurostat: if TRUE it fetches the catches in all fishing regions by country to compare the total weight
-
+# prelcatchstat: if TRUE you need to supply the file path where the file downloaded from ICES is stored under the prelcatchFile param
+# fleetRegister: if TRUE you need to supply the file path where the file downloaded from Eurostat is stored under the fleetRegisterFile param
 
 
 
@@ -15,13 +16,17 @@ rmarkdown::render("RDBESNationalQualityReport.Rmd", params = list(
   
   region = "", # Choices will correspond to RCG codes, ignore for now needs further development
   
-  file = c("./HCL_2024_02_20_110233.zip", "./HCL_2024_02_20_110234.zip","./HCE_2024_02_20_110348.zip", "./HCE_2024_02_20_110349.zip"),
+  RDBESfile = c("./HCL_2024_02_20_110233.zip", "./HCL_2024_02_20_110234.zip","./HCE_2024_02_20_110348.zip", "./HCE_2024_02_20_110349.zip"),
   
   eurostat = TRUE,
   
-  prelcatchstat = FALSE, # TRUE is not working need to give file 
+  prelcatchstat = FALSE,
   
-  fleetRegister = FALSE # TRUE is not working need to give file
+  prelcatchFile = "", # TRUE is not working not yet implemented 
+  
+  fleetRegister = FALSE,   # TRUE is not working not yet implemented 
+  
+  fleetRegisterFile = ""
   
 ))
 

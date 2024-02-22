@@ -4,10 +4,12 @@ output: html_document
 params:
   year: year
   region: region
-  file: file
+  RDBESfile: RDBESfile
   eurostat: eurostat
   prelcatchstat: prelcatchstat
+  prelcatchFile: prelcatchFile
   fleetRegister: fleetRegister
+  fleetRegisterFile: fleetRegisterFile
 ---
 
 ```{r setup, include=FALSE}
@@ -40,7 +42,7 @@ title: National quality report for year(s) `r params$year`
 # df <- createRDBESDataObject(params$file) # overwrites if given multiple zip files with the same tables
 # check what happens if all years are in one zip folder when time series are uploaded 
 # For now use this 
-df <- read.rdbes(file)
+df <- read.rdbes(params$RDBESfile)
 CL <- as.data.frame(df[1])
 CE <- as.data.frame(df[2])
 ```
@@ -57,19 +59,17 @@ head(eurostat)
 # 2. ICES preliminary catches
 # Need to download the zip(s) from ICES? can it be fetched otherwise? I only see 2021 - 2022 prel catch statistics in the ices web 
 
-
-
 ```
 
 ```{r}
 # 3. Fleet register 
-# The fleet data in the eurostat datasets are not clear. Could they be used 
+# The fleet data in the eurostat datasets are not clear. Could they be used? 
 ```
 
 
 ```{r}
 # Processing 
-# Get scientific name
+# Get species scientific name from aphiaID
 ScName <- getCodeList("SpecWorms") %>%
   select(Description, Key)
 CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key")) 
