@@ -14,14 +14,14 @@ read.rdbes <- function(file){
   CLfiles <- unique(file[str_detect(file, "HCL")])
   CEfiles <- unique(file[str_detect(file, "HCE")])
   
-  if(length(unique(CLfiles)) > 1){
+  if(length(CLfiles) > 1){
     listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"), header=T,  sep=",")})
     CL <- do.call(rbind, listCL)
   }else{
     CL <- read.table(unz(CLfiles, "CommercialLanding.csv"), header=T,  sep=",")
   }
   
-  if(length(unique(CEfiles)) > 1){
+  if(length(CEfiles) > 1){
     listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"), header=T,  sep=",")})
     CE <- do.call(rbind, listCE)
   }else{

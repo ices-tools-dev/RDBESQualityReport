@@ -1,6 +1,11 @@
 ---
-date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
+# date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 4
+    number_sections: true
+    toc_float: true
 params:
   year: year
   region: region
@@ -29,7 +34,7 @@ library(eurostat)
 
 ```{r}
 # Functions 
-source("./Functions/read.rdbes.R")
+source("../Functions/read.rdbes.R")
 ```
 
 ---
@@ -39,7 +44,7 @@ title: National quality report for year(s) `r params$year`
 
 ```{r}
 # Read RDBES CL, CE files 
-# df <- createRDBESDataObject(params$file) # overwrites if given multiple zip files with the same tables
+# df <- createRDBESDataObject(params$RDBESfile) # overwrites if given multiple zip files with the same tables
 # check what happens if all years are in one zip folder when time series are uploaded 
 # For now use this 
 df <- read.rdbes(params$RDBESfile)
@@ -49,10 +54,13 @@ CE <- as.data.frame(df[2])
 
 ```{r, eval = params$eurostat}
 # Auxiliary information for comparisons 
-# 1. Eurostat data 
-eurostat <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
+# 1. Eurostat data - weight 
+eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
 # https://ec.europa.eu/eurostat/databrowser/view/tag00076/default/table?lang=en&category=t_fish
-head(eurostat)
+
+# 2. Eurostat data - number of vessels 
+# eurostatV <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE)
+
 ```
 
 ```{r}
@@ -80,6 +88,14 @@ CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key"))
 
 
 ```
+
+# Summary 
+
+```{r,  child = '01_Eurostat.Rmd', eval = params$eurostat}
+
+```
+
+
 
 
 # CL 
