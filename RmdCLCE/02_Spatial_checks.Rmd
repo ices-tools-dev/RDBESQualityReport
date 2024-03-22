@@ -1,6 +1,6 @@
 ```{r title, include = F}
 
-front_title <- "RDBES CL Multinational overviews"
+front_title <- "02.Spatial Checks"
 
 ```
 
