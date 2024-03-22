@@ -18,7 +18,7 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 12, fig.width = 14)
 options(scipen=999)
 ```
 
@@ -26,8 +26,9 @@ options(scipen=999)
 # Packages 
 # TODO add automatic install for packages if they do not exist 
 library(icesVocab)
-library(tidyverse)
+library(tidyverse, quietly = TRUE)
 library(eurostat)
+library(DT)
 # library(RDBEScore)
 ```
 
@@ -90,6 +91,8 @@ CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key"))
 ```
 
 # Summary 
+
+Add text with a brief summary describing what the document's purpose is etc. 
 
 ```{r,  child = '01_Eurostat.Rmd', eval = params$eurostat}
 

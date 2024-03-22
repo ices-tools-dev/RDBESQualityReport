@@ -3,8 +3,30 @@
 
 ## Total catches 
 
-```{r}
+Description about the data source. 
 
+```{r}
+CLToT <- CL %>%
+  distinct() %>% # remove after I have multiple years 
+  group_by(CLlandingCountry, CLyear) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE)/1000,
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE)/1000) 
+
+eurostatW <- mutate(eurostatW, time = as.character(time))
+
+eurostatComp <- left_join(eurostatW, CLToT, by = c("time"  ="CLyear", "geo" = "CLlandingCountry"))
+
+eurostatComp <- select(eurostatComp, geo:CLscientificWeight) %>%
+  rename(CLlandingCountry = geo,
+         CLyear =  time, 
+         EurostatWeight = values)
+```
+
+```{r}
+eurostatComp1 <- gather(eurostatComp, WeightSource, Weight, -CLyear, -CLlandingCountry)
+ggplot(eurostatComp1, aes(CLyear, Weight, fill = WeightSource)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  ylab("Weight (t)")
 ```
 
 
