@@ -15,17 +15,21 @@ read.rdbes <- function(file){
   CEfiles <- unique(file[str_detect(file, "HCE")])
   
   if(length(CLfiles) > 1){
-    listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"), header=T,  sep=",")})
+    listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"), 
+                                                     header=T,  sep=",", quote = "")})
     CL <- do.call(rbind, listCL)
   }else{
-    CL <- read.table(unz(CLfiles, "CommercialLanding.csv"), header=T,  sep=",")
+    CL <- read.table(unz(CLfiles, "CommercialLanding.csv"), 
+                     header=T,  sep=",", quote = "")
   }
   
   if(length(CEfiles) > 1){
-    listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"), header=T,  sep=",")})
+    listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"), 
+                                                     header=T,  sep=",", quote = "")})
     CE <- do.call(rbind, listCE)
   }else{
-    CE <- read.table(unz(CEfiles, "CommercialEffort.csv"), header=T,  sep=",")
+    CE <- read.table(unz(CEfiles, "CommercialEffort.csv"), 
+                     header=T,  sep=",", quote = "")
   }
   
   # Character 
