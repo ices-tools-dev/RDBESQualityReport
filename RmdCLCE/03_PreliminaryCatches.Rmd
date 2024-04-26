@@ -1,0 +1,47 @@
+
+## Preliminary ICES catches 
+
+Description about the data source. 
+
+```{r}
+prelC1 <- gather(prelC,  CatchCategory, PrelCWeight, -c(Year, AphiaID, Species.Latin.Name, Area, Country))
+prelC1 <- filter(prelC1, Country %in%  unique(CL$CLlandingCountry))
+
+CL1 <- CL %>%
+  group_by(CLarea, CLyear, CLlandingCountry, CLcatchCategory, CLspeciesCode, LatinName) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CL2 <- filter(CL1, CLyear %in% unique(prelC1$Year))
+
+prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLlandingCountry", "AphiaID" = "CLspeciesCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCategory"))
+
+# Change to kg 
+prelCatches$PrelCWeight <- prelCatches$PrelCWeight*1000
+
+# Gather 
+prelCatches <- gather(prelCatches, WeightSource, Weight, -c(Year, Species.Latin.Name, Area, Country, CatchCategory, AphiaID))
+
+
+```
+
+
+```{r}
+myplots <- list()
+for(i in sort(unique(prelCatches$Species.Latin.Name))){
+  myplots[[i]] <- 
+    ggplot(subset(prelCatches, Species.Latin.Name == i), aes(x= Area, y=Weight, fill = WeightSource)) +    geom_bar(stat = "identity", position = "dodge")+
+    facet_grid(~CatchCategory)+ 
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, hjust = 1)) 
+}
+```
+
+
+```{r, results='asis'}
+for(i in unique(names(myplots))){
+  catHeader(names(myplots[i]), 3)
+  lapply(myplots[i], print)
+}
+```
+

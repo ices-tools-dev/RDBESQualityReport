@@ -1,18 +1,19 @@
 
-# Eurostat 
-
-## Total catches 
+## Eurostat 
 
 Description about the data source. 
 
 ```{r}
 CLToT <- CL %>%
-  distinct() %>% # remove after I have multiple years 
+  filter(CLcatchCategory %in% "Lan") %>%
   group_by(CLlandingCountry, CLyear) %>%
   summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE)/1000,
             CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE)/1000) 
 
-eurostatW <- mutate(eurostatW, time = as.character(time))
+eurostatW <- mutate(eurostatW, 
+                    time = as.character(time)) %>%
+  add_row(time = max(CL$CLyear), # add the most recent year in the CL even though the eurostat data will not be released by then 
+          geo = unique(CL$CLlandingCountry))
 
 eurostatComp <- left_join(eurostatW, CLToT, by = c("time"  ="CLyear", "geo" = "CLlandingCountry"))
 
@@ -26,12 +27,22 @@ eurostatComp <- select(eurostatComp, geo:CLscientificWeight) %>%
 eurostatComp1 <- gather(eurostatComp, WeightSource, Weight, -CLyear, -CLlandingCountry)
 ggplot(eurostatComp1, aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
-  ylab("Weight (t)")
+  ylab("Landed weight (t)") +
+  theme_bw() + 
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
 
 
+```{r}
+eurostatComp %>%
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Blfrtip',
+                           buttons = c('copy', 'csv', 'excel'),
+                           lengthMenu = list(c(10,25,50,-1),
+                                             c(10,25,50,"All"))))
+```
 
-## Total number of vessels
 
 
 

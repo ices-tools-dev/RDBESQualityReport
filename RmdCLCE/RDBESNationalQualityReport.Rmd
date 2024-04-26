@@ -18,13 +18,18 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE, fig.height = 12, fig.width = 14)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 14)
 options(scipen=999)
 ```
 
 ```{r}
 # Packages 
-# TODO add automatic install for packages if they do not exist 
+# Installs missing packages automatically 
+list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT")
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+# Loads packages 
 library(icesVocab)
 library(tidyverse, quietly = TRUE)
 library(eurostat)
@@ -35,12 +40,17 @@ library(DT)
 
 ```{r}
 # Functions 
+# TODO add catHeader to script and load them all at once 
 source("../Functions/read.rdbes.R")
-```
+source("../Functions/read.prelC.R")
 
----
-title: National quality report for year(s) `r params$year`
----
+catHeader <- function(text = "", level = 3) {
+    cat(paste0("\n\n", 
+               paste(rep("#", level), collapse = ""), 
+               " ", text, "\n"))
+}
+
+```
 
 
 ```{r}
@@ -53,6 +63,136 @@ CL <- as.data.frame(df[1])
 CE <- as.data.frame(df[2])
 ```
 
+```{r}
+clY <- sort(unique(CL$CLyear))
+ceY <- sort(unique(CE$CEyear))
+# TODO add consistency checks between CL and CE and add warning for the comparison of both if there are
+# no matching years 
+
+if(all(clY == ceY) & length(unique(clY)) > 1){
+  titleR <- paste("National quality report for years", paste(clY, collapse = ", "))
+}else{
+  titleR <- paste("National quality report for year ", clY)
+}
+```
+
+---
+title: `r titleR`
+---
+
+
+
+```{r}
+# Processing 
+# Get species scientific name from aphiaID
+ScName <- getCodeList("SpecWorms") %>%
+  select(Description, Key) %>%
+  rename(LatinName = Description)
+CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key")) 
+```
+
+```{r}
+
+# CL$CLcatchCategory <- "RegDis"
+# CL$CLregDisCategory <- "Deminimis"
+
+```
+
+# Summary 
+
+Add text with a brief summary describing what the document's purpose is etc. 
+
+```{r}
+# Number of records 
+CLr <- CL %>%
+  group_by(CLyear) %>%
+  count() %>%
+  mutate(Dataset = "CL") %>%
+  rename(Year = CLyear)
+CEr <- CE %>%
+  group_by(CEyear) %>%
+  count() %>%
+  mutate(Dataset = "CE") %>%
+  rename(Year = CEyear)
+tabN <- rbind(CLr, CEr) %>%
+  spread(Year, n) 
+
+tabN %>%
+  datatable(caption = "Number of records in the CL and CE tables by year", options = list(dom = 't'))
+```
+
+
+```{r}
+# Numbers of metier lvl 6 
+CLm <- CL %>%
+  group_by(CLyear) %>%
+  summarise(Nmet = length(unique(CLmetier6))) %>%
+  mutate(Dataset = "CL") %>%
+  rename(Year = CLyear)
+CEm <- CE %>%
+  group_by(CEyear) %>%
+  summarise(Nmet = length(unique(CEmetier6))) %>%
+  mutate(Dataset = "CE") %>%
+  rename(Year = CEyear)
+tabN <- rbind(CLm, CEm) %>%
+  spread(Year, Nmet) 
+
+tabN %>%
+  datatable(caption = "Number of unique metiers level 6 in the CL and CE tables by year", options = list(dom = 't'))
+
+```
+
+```{r}
+# Number of unique vessels by year 
+
+CLv <- select(CL, CLyear, CLencryptedVesselIds) %>%
+  distinct() %>%
+  separate_rows(CLencryptedVesselIds, convert = TRUE) %>%
+  distinct() %>%
+  group_by(CLyear) %>%
+  summarise(NumberOfUniqueVessels = length(unique(CLencryptedVesselIds))) %>%
+  mutate(Dataset = "CL") %>%
+  rename(Year = CLyear)
+CEv <- select(CE, CEyear, CEencryptedVesselIds) %>%
+  distinct() %>%
+  separate_rows(CEencryptedVesselIds, convert = TRUE) %>%
+  distinct()%>%
+  group_by(CEyear) %>%
+  summarise(NumberOfUniqueVessels = length(unique(CEencryptedVesselIds)))%>%
+  mutate(Dataset = "CE") %>%
+  rename(Year = CEyear)
+
+tabV <- rbind(CLv, CEv)%>%
+  spread(Year, NumberOfUniqueVessels) 
+tabV %>%
+  datatable(caption = "Number of unique vessels in the CL and CE tables by year", options = list(dom = 't'))
+```
+
+
+```{r}
+# Number of species
+CLsp <- CL %>%
+  group_by(CLyear) %>%
+  summarise(NumberOfSpecies = length(unique(CLspeciesCode)))
+
+CLsp %>%
+  datatable(caption = "Number of species by year in the CL table" , colnames = c("Year" = 1), rownames = FALSE, options = list(dom = 't'))
+
+```
+
+
+```{r}
+# Run next chunk? 
+doNextChunk <- any(c(params$eurostat, params$prelcatchstat, params$fleetRegister))
+```
+
+
+```{r, results='asis', eval = doNextChunk}
+cat("# Comparison with auxiliary data sources")
+```
+
+
+
 ```{r, eval = params$eurostat}
 # Auxiliary information for comparisons 
 # 1. Eurostat data - weight 
@@ -64,11 +204,20 @@ eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = 
 
 ```
 
-```{r}
-# 2. ICES preliminary catches
-# Need to download the zip(s) from ICES? can it be fetched otherwise? I only see 2021 - 2022 prel catch statistics in the ices web 
+```{r,  child = '01_Eurostat.Rmd', eval = params$eurostat}
 
 ```
+
+```{r}
+# 2. ICES preliminary catches
+prelC <- read.prelC(params$prelcatchFile)
+```
+
+
+```{r,  child = '03_PreliminaryCatches.Rmd', eval = params$prelcatchstat}
+
+```
+
 
 ```{r}
 # 3. Fleet register 
@@ -76,33 +225,22 @@ eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = 
 ```
 
 
-```{r}
-# Processing 
-# Get species scientific name from aphiaID
-ScName <- getCodeList("SpecWorms") %>%
-  select(Description, Key)
-CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key")) 
+
+
+```{r, child = 'CL_Multiannual.Rmd'}
+
 ```
+
+```{r, child = 'CE_Multiannual.Rmd'}
+
+```
+
+
+
+# CL & CE 
 
 ```{r}
 # Merge CL, CE tables 
 
 
 ```
-
-# Summary 
-
-Add text with a brief summary describing what the document's purpose is etc. 
-
-```{r,  child = '01_Eurostat.Rmd', eval = params$eurostat}
-
-```
-
-
-
-
-# CL 
-
-# CE
-
-# CL & CE 

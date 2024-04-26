@@ -1,0 +1,256 @@
+
+# CL 
+
+## Weight
+
+```{r}
+
+# Total weights (sci, off) by year & catch category 
+CLw <- CL %>%
+  group_by(CLyear, CLcatchCategory) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLcatchCategory))
+
+ggplot(CLw, aes(CLyear, Weight, fill = WeightSource)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(CLcatchCategory~.) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+```{r}
+# Sci weight by data type & source 
+CLws <- CL %>%
+  group_by(CLyear, CLdataTypeOfScientificWeight, CLdataSourceOfScientificWeight,  CLarea) %>%
+  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+
+ggplot(CLws, aes(CLarea, CLscientificWeight, fill = CLyear)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(CLdataTypeOfScientificWeight~CLdataSourceOfScientificWeight) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+```
+
+```{r}
+
+# Sampling shceme - How to show it? 
+CLwn <- CL %>%
+  group_by(CLyear, CLdataTypeOfScientificWeight, CLdataSourceOfScientificWeight,  CLsamplingScheme, CLarea) %>%
+  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+```
+
+
+```{r}
+# Landing vs vessel flag country 
+CLvs <- CL %>%
+  group_by(CLyear, CLlandingCountry, CLvesselFlagCountry) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CLvs<- gather(CLvs, WeightSource, Weight, -c(CLyear, CLlandingCountry, CLvesselFlagCountry))
+CLvs <- gather(CLvs, CountrySource, Country, -c(CLyear, WeightSource, Weight))
+ggplot(CLvs, aes(CLyear, Weight, fill = WeightSource)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(Country~CountrySource) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+```
+```{r}
+# Check which catch categories are present and produce only these plots 
+doNextChunkLan <- any(ifelse(CL$CLcatchCategory %in% "Lan", TRUE, FALSE))
+doNextChunkBMS <- any(ifelse(CL$CLcatchCategory %in% "BMS", TRUE, FALSE))
+doNextChunkDis <- any(ifelse(CL$CLcatchCategory %in% "RegDis", TRUE, FALSE))
+```
+
+
+
+### By quarter 
+
+```{r, eval = doNextChunkLan, results='asis'}
+
+cat("#### Landings \n\n")
+CLw <- CL %>%
+  filter(CLcatchCategory %in% "Lan") %>%
+  group_by(CLyear, CLquarter, CLarea) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLarea, CLquarter))
+
+ggplot(CLw, aes(CLarea, Weight, fill = CLyear)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(CLquarter~.) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+```{r , eval = doNextChunkBMS, results='asis'}
+cat("#### BMS \n\n")
+CLw <- CL %>%
+  filter(CLcatchCategory %in% "BMS") %>%
+  group_by(CLyear, CLquarter, CLarea) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLarea, CLquarter))
+
+ggplot(CLw, aes(CLarea, Weight, fill = CLyear)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(CLquarter~.) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+
+
+```{r, eval = doNextChunkDis, results='asis'}
+cat("#### Logbook registered discards \n\n")
+
+CLlrd <- CL %>%
+  filter(CLcatchCategory %in% "RegDis") %>%
+  group_by(CLyear, CLregDisCategory, CLarea) %>%
+  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
+            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+CLlrd <- gather(CLlrd, WeightSource, Weight, -c(CLyear, CLarea, CLregDisCategory))
+
+ggplot(CLlrd, aes(CLarea, Weight, fill = CLyear)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_grid(CLregDisCategory~.) +
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+
+### By top 20 species
+
+```{r, eval = doNextChunkLan, results='asis'}
+
+cat("#### Landings \n\n")
+CLlan <- filter(CL, CLcatchCategory %in% "Lan")
+top20_CLSpecies <- CLlan %>%
+  group_by(LatinName) %>%
+  summarise(lvTot=sum(CLscientificWeight)) %>%
+  arrange(desc(lvTot)) %>%
+  top_n(20)
+top20_CLSpecies$Top20CLSpecies <- "X"
+CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
+CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
+
+CLweightS <- CL1 %>%
+  group_by(topCLSpecies, CLyear, CLlandingCategory) %>%
+  summarise(CLoffWeight = sum(CLofficialWeight),
+            CLsciWeight = sum(CLscientificWeight)) %>%
+  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear, CLlandingCategory))
+
+
+ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CLweightSource)) +
+  geom_bar(position="dodge", stat="identity") +
+  facet_grid(CLyear~CLlandingCategory) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
+  xlab("topCLSpecies") +
+  ylab("CLweight (t)")
+
+```
+
+
+```{r, eval = doNextChunkBMS, results='asis'}
+
+cat("#### BMS \n\n")
+
+CLlan <- filter(CL, CLcatchCategory %in% "BMS")
+top20_CLSpecies <- CLlan %>%
+  group_by(LatinName) %>%
+  summarise(lvTot=sum(CLscientificWeight)) %>%
+  arrange(desc(lvTot)) %>%
+  top_n(20)
+top20_CLSpecies$Top20CLSpecies <- "X"
+CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
+CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
+
+CLweightS <- CL1 %>%
+  group_by(topCLSpecies, CLyear, CLlandingCategory) %>%
+  summarise(CLoffWeight = sum(CLofficialWeight),
+            CLsciWeight = sum(CLscientificWeight)) %>%
+  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear, CLlandingCategory))
+
+
+ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CLweightSource)) +
+  geom_bar(position="dodge", stat="identity") +
+  facet_grid(CLyear~CLlandingCategory) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
+  xlab("topCLSpecies") +
+  ylab("CLweight (t)")
+
+```
+
+```{r, eval = doNextChunkDis, results='asis'}
+
+cat("#### Logbook registered discards \n\n")
+
+CLlan <- filter(CL, CLcatchCategory %in% "RegDis")
+top20_CLSpecies <- CLlan %>%
+  group_by(LatinName) %>%
+  summarise(lvTot=sum(CLscientificWeight)) %>%
+  arrange(desc(lvTot)) %>%
+  top_n(20)
+top20_CLSpecies$Top20CLSpecies <- "X"
+CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
+CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
+
+CLweightS <- CL1 %>%
+  group_by(topCLSpecies, CLyear, CLregDisCategory) %>%
+  summarise(CLoffWeight = sum(CLofficialWeight),
+            CLsciWeight = sum(CLscientificWeight)) %>%
+  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear, CLregDisCategory))
+
+
+ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CLweightSource)) +
+  geom_bar(position="dodge", stat="identity") +
+  facet_grid(CLyear~CLregDisCategory) +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
+  xlab("topCLSpecies") +
+  ylab("CLweight (t)")
+
+```
+
+### By metier level 6 (top 20)
+
+```{r}
+#Find top 20 metiers
+# top20_metiers <- CL1 %>%
+#   group_by(CLmetier6) %>%
+#   summarise(lwTot=sum(CLtotOffLanVal)) %>%
+#   arrange(desc(lwTot)) %>%
+#   top_n(20)
+# top20_metiers$Top20metiers <- "X"
+# CL1 <- left_join(CL1,top20_metiers,by="CLmetier6")
+# CL1$topMetiers <- ifelse(is.na(CL1$Top20metiers),"OTH",CL1$CLmetier6)
+
+```
+
+
+
+### By vessel length category 
+
+
+
+
+## Value 
+
+
+```{r}
+
+```
+
+
+## Spatial checks 
+
+

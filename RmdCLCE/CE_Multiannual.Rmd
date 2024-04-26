@@ -1,0 +1,47 @@
+
+# CE
+
+## Number of trips 
+
+```{r}
+CEtr <- CE %>% 
+  group_by(CEyear) %>%
+  summarise(CEnumberOfFractionalTrips = sum(CEnumberOfFractionalTrips, na.rm = TRUE),
+            CEnumberOfDominantTrips = sum(CEnumberOfDominantTrips, na.rm = TRUE))
+
+CEtr1 <- gather(CEtr, NumberofTripsSource, NumberofTrips, -CEyear)
+
+ggplot(CEtr1, aes(CEyear, NumberofTrips, fill = NumberofTripsSource)) +
+  geom_bar(stat = "identity", position = "dodge")
+
+CEtr %>%
+  datatable(extensions = 'Buttons',
+            options = list(dom = 'Blfrtip',
+                           buttons = c('copy', 'csv', 'excel'),
+                           lengthMenu = list(c(10,25,50,-1),
+                                             c(10,25,50,"All"))))
+
+```
+```{r}
+ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumberOfDominantTrips)) +
+  geom_point() +
+  facet_grid(.~CEyear)
+```
+
+
+
+## Fishing days 
+
+```{r}
+CEfd <- CE %>%
+  group_by(CEyear) %>%
+  summarise(CEscientificFishingDays = sum(CEscientificFishingDays, na.rm = TRUE))
+```
+
+
+```{r}
+ggplot(CE, aes(CEscientificFishingDays, CEscientificDaysAtSea)) +
+  geom_point() +
+  facet_grid(.~CEyear)
+```
+
