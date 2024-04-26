@@ -7,13 +7,13 @@ Description about the data source.
 
 ```{r}
 CEkeyColumns <- c("CErecordType","CEvesselFlagCountry","CEyear","CEquarter","CEmonth" ,"CEarea",                                
-               "CEstatisticalRectangle","CEfisheriesManagementUnit","CEgsaSubarea",                          
-               "CEjurisdictionArea","CEfishingAreaCategory","CEfreshWaterName",                      
-               "CEexclusiveEconomicZone","CEnationalFishingActivity","CEmetier6",                             
-               "CEincidentalByCatchMitigationDevice","CElandingLocation",                     
-               "CEvesselLengthCategory","CEfishingTechnique","CEmeshSizeRange",                       
-               "CEsupraRegion","CEgeoIndicator","CEspecificConditionsTechnical",         
-               "CEdeepSeaRegulation")
+                  "CEstatisticalRectangle","CEfisheriesManagementUnit","CEgsaSubarea",                          
+                  "CEjurisdictionArea","CEfishingAreaCategory","CEfreshWaterName",                      
+                  "CEexclusiveEconomicZone","CEnationalFishingActivity","CEmetier6",                             
+                  "CEincidentalByCatchMitigationDevice","CElandingLocation",                     
+                  "CEvesselLengthCategory","CEfishingTechnique","CEmeshSizeRange",                       
+                  "CEsupraRegion","CEgeoIndicator","CEspecificConditionsTechnical",         
+                  "CEdeepSeaRegulation")
 CLkeyColumns <- c("CLrecordType","CLvesselFlagCountry","CLyear","CLquarter","CLmonth" ,"CLarea",                                
                   "CLstatisticalRectangle","CLfisheriesManagementUnit","CLgsaSubarea",                          
                   "CLjurisdictionArea","CLfishingAreaCategory","CLfreshWaterName",                      
@@ -24,13 +24,13 @@ CLkeyColumns <- c("CLrecordType","CLvesselFlagCountry","CLyear","CLquarter","CLm
                   "CLdeepSeaRegulation")
 
 CEkeys <- CE %>%
-  select(all_of(CEkeyColumns)) %>% 
-  distinct()
+  group_by_at(CEkeyColumns) %>% 
+  summarise(CEscientificDaysAtSea = sum(CEscientificDaysAtSea, na.rm=T))
 colnames(CEkeys) <- sub("^CE","",colnames(CEkeys))
 
 CLkeys <- CL %>%
-  select(all_of(CLkeyColumns)) %>% 
-  distinct()
+  group_by_at(CLkeyColumns) %>% 
+  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm=T))
 colnames(CLkeys) <- sub("^CL","",colnames(CLkeys))
 
 keysSummary <- CEkeys %>% 
@@ -45,6 +45,19 @@ ggplot(keysSummary, aes(year, n, fill = recordType)) +
        x = "Year",
        fill = "Record type",
        title = "Comparison of CL and CE unique keys")
+
+```
+
+Landings without corresponding effort
+
+```{r}
+
+
+
+lanWoEffort <- CLkeys %>% 
+  anti_join(CEkeys, by = colnames(CEkeys)[2:24])
+rmarkdown::paged_table(lanWoEffort)
+
 ```
 
 
