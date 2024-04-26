@@ -1,0 +1,52 @@
+
+# CL & CE 
+
+## Comparison of CE and CL unique keys 
+
+Description about the data source. 
+
+```{r}
+CEkeyColumns <- c("CErecordType","CEvesselFlagCountry","CEyear","CEquarter","CEmonth" ,"CEarea",                                
+               "CEstatisticalRectangle","CEfisheriesManagementUnit","CEgsaSubarea",                          
+               "CEjurisdictionArea","CEfishingAreaCategory","CEfreshWaterName",                      
+               "CEexclusiveEconomicZone","CEnationalFishingActivity","CEmetier6",                             
+               "CEincidentalByCatchMitigationDevice","CElandingLocation",                     
+               "CEvesselLengthCategory","CEfishingTechnique","CEmeshSizeRange",                       
+               "CEsupraRegion","CEgeoIndicator","CEspecificConditionsTechnical",         
+               "CEdeepSeaRegulation")
+CLkeyColumns <- c("CLrecordType","CLvesselFlagCountry","CLyear","CLquarter","CLmonth" ,"CLarea",                                
+                  "CLstatisticalRectangle","CLfisheriesManagementUnit","CLgsaSubarea",                          
+                  "CLjurisdictionArea","CLfishingAreaCategory","CLfreshWaterName",                      
+                  "CLexclusiveEconomicZone","CLnationalFishingActivity","CLmetier6",                             
+                  "CLincidentalByCatchMitigationDevice","CLlandingLocation",                     
+                  "CLvesselLengthCategory","CLfishingTechnique","CLmeshSizeRange",                       
+                  "CLsupraRegion","CLgeoIndicator","CLspecificConditionsTechnical",         
+                  "CLdeepSeaRegulation")
+
+CEkeys <- CE %>%
+  select(all_of(CEkeyColumns)) %>% 
+  distinct()
+colnames(CEkeys) <- sub("^CE","",colnames(CEkeys))
+
+CLkeys <- CL %>%
+  select(all_of(CLkeyColumns)) %>% 
+  distinct()
+colnames(CLkeys) <- sub("^CL","",colnames(CLkeys))
+
+keysSummary <- CEkeys %>% 
+  rbind(CLkeys) %>% 
+  group_by(vesselFlagCountry,year,recordType) %>% 
+  summarise(n=n())
+
+ggplot(keysSummary, aes(year, n, fill = recordType)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~vesselFlagCountry, scales = "free_y")+
+  labs(y = "Number of unique keys",
+       x = "Year",
+       fill = "Record type",
+       title = "Comparison of CL and CE unique keys")
+```
+
+
+
+
