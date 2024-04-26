@@ -1,0 +1,123 @@
+
+# CL & CE 
+
+```{r}
+# Merge on unique keys common in both datasets  
+CECL <- left_join(CL, CE, by = c("CLdataTypeOfScientificWeight" = "CEdataTypeOfScientificEffort", 
+                                 "CLdataSourceOfScientificWeight" = "CEdataSourceOfScientificEffort",
+                                 "CLsamplingScheme" = "CEsamplingScheme",
+                                 "CLvesselFlagCountry" = "CEvesselFlagCountry", 
+                                 "CLyear" = "CEyear", 
+                                 "CLquarter" = "CEquarter", 
+                                 "CLmonth" = "CEmonth",
+                                 "CLarea" = "CEarea",  
+                                 "CLstatisticalRectangle" = "CEstatisticalRectangle", 
+                                 "CLdataSourceOfStatisticalRectangle" = "CEdataSourceOfStatisticalRectangle",
+                                 "CLfisheriesManagementUnit" = "CEfisheriesManagementUnit",
+                                 "CLgsaSubarea" = "CEgsaSubarea",
+                                 "CLjurisdictionArea" = "CEjurisdictionArea", 
+                                 "CLfishingAreaCategory" = "CEfishingAreaCategory",
+                                 "CLfreshWaterName" = "CEfreshWaterName",
+                                 "CLexclusiveEconomicZone" = "CEexclusiveEconomicZone",
+                                 "CLnationalFishingActivity" = "CEnationalFishingActivity", 
+                                 "CLmetier6" = "CEmetier6",
+                                 "CLincidentalByCatchMitigationDevice" = "CEincidentalByCatchMitigationDevice",
+                                 "CLlandingLocation" = "CElandingLocation",
+                                 "CLvesselLengthCategory" = "CEvesselLengthCategory",
+                                 "CLfishingTechnique" = "CEfishingTechnique",
+                                 "CLmeshSizeRange" = "CEmeshSizeRange",
+                                 "CLsupraRegion" = "CEsupraRegion",
+                                 "CLgeoIndicator" = "CEgeoIndicator",
+                                 "CLspecificConditionsTechnical" = "CEspecificConditionsTechnical",
+                                 "CLdeepSeaRegulation" = "CEdeepSeaRegulation"))
+                                 
+                                 
+                                 
+# Rows same as CL? 
+nrow(CL) == nrow(CECL)         
+# Checks on how they are merged - All? 
+```
+
+
+
+```{r}
+
+# Ag <- CECL %>%
+#   group_by(CLdataTypeOfScientificWeight, CLdataSourceOfScientificWeight, CLsamplingScheme, CLdataSourceLandingsValue, CLlandingCountry,  CLvesselFlagCountry, CLyear, CLquarter, CLmonth, CLarea, CLstatisticalRectangle, CLfisheriesManagementUnit, CLgsaSubarea, CLjurisdictionArea, CLfishingAreaCategory,
+# CLfreshWaterName, CLexclusiveEconomicZone, CLexclusiveEconomicZoneIndicator, CLspeciesCode, CLspeciesFaoCode,
+# CLlandingCategory, CLcatchCategory, CLregDisCategory, CLcommercialSizeCategoryScale, CLcommercialSizeCategory, CLnationalFishingActivity, CLmetier6, CLincidentalByCatchMitigationDevice, CLlandingLocation, CLvesselLengthCategory, CLfishingTechnique, CLmeshSizeRange, CLsupraRegion, CLgeoIndicator, CLspecificConditionsTechnical, CLdeepSeaRegulation) %>%
+#   summarise(CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE),
+#             CEscientificFishingDays = sum(CEscientificFishingDays, na.rm = TRUE))
+```
+
+
+```{r eval=FALSE, include=FALSE}
+
+# Test - not run 
+# Link with stock codes 
+library(cowplot)
+CLag <- CL %>%
+  filter(CLcatchCategory %in% "Lan") %>%
+  group_by(CLyear, CLquarter, CLarea, CLmetier6, CLspeciesFaoCode) %>%
+  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+
+CEag <- CE %>%
+    group_by(CEyear, CEquarter, CEarea, CEmetier6) %>%
+    summarise(CEscientificFishingDays= sum(CEscientificFishingDays, na.rm = TRUE))
+
+
+CLCEag <- left_join(CLag, CEag, by = c("CLyear" = "CEyear", "CLquarter" = "CEquarter", "CLarea" = "CEarea", "CLmetier6" = "CEmetier6"))
+
+
+spl <- split(CLCEag, CLCEag$CLspeciesFaoCode)
+spl <- spl["PLE"]
+
+a <- list()
+b <- list()
+a <- lapply(spl, function(x) {
+  ggplot(x, aes(CLmetier6, CLscientificWeight, fill = CLyear))+
+    geom_bar(stat = "identity")+
+    facet_grid(CLquarter~.)+
+    ggtitle(paste0(x$CLspeciesFaoCode))+
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) })
+b <- lapply(spl, function(x) {
+  ggplot(x, aes(CLmetier6, CEscientificFishingDays, fill = CLyear))+
+    geom_bar(stat = "identity")+
+    facet_grid(CLquarter~.)+
+    ggtitle(paste0(x$CLspeciesFaoCode))+
+  theme_bw() +
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, hjust = 1)) })
+plot_grid(a[[1]], b[[1]])
+```
+
+```{r}
+
+CLag <- CL %>%
+  filter(CLcatchCategory %in% "Lan") %>%
+  group_by(CLyear,  CLarea,  CLvesselLengthCategory) %>%
+  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+
+CEag <- CE %>%
+    group_by(CEyear, CEarea, CEvesselLengthCategory) %>%
+    summarise(CEscientificFishingDays= sum(CEscientificFishingDays, na.rm = TRUE))
+
+CLCEag <- left_join(CLag, CEag, by = c("CLyear" = "CEyear",  "CLarea" = "CEarea","CLvesselLengthCategory" = "CEvesselLengthCategory"))
+# CLCEag <- left_join(CLCEag, Area, by = c("CLarea" = "AreaCode"))
+
+CLCEag$CLvesselLengthCategory <- droplevels(CLCEag$CLvesselLengthCategory)
+ggplot(CLCEag, aes(CLarea, CLscientificWeight, fill = CLyear)) +
+  geom_bar(stat= "identity") +
+  facet_grid(CLvesselLengthCategory~., scales = "free")+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+ggplot(CLCEag, aes(CLarea, CEscientificFishingDays, fill = CLyear)) +
+  geom_bar(stat= "identity") +
+  facet_grid(CLvesselLengthCategory~., scales = "free")+
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+

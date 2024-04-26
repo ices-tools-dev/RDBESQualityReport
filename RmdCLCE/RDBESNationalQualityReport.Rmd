@@ -52,6 +52,17 @@ catHeader <- function(text = "", level = 3) {
 
 ```
 
+```{r}
+url <- "https://raw.githubusercontent.com/ices-eg/RCGs/master/Metiers/Reference_lists/AreaRegionLookup.csv"
+Area <- read.csv(url, header = TRUE)
+### Fix the extra space in rcg region code
+Area <- mutate(Area, Code = ifelse(Code %in% "NSEA                                    " , "NSEA",
+                             ifelse(Code %in% "NAtl                                      ", "NAtl", Code))) %>%
+  select(AreaCode, Code)
+
+```
+
+
 
 ```{r}
 # Read RDBES CL, CE files 
@@ -236,11 +247,7 @@ prelC <- read.prelC(params$prelcatchFile)
 ```
 
 
-
-# CL & CE 
-
-```{r}
-# Merge CL, CE tables 
-
+```{r, child = 'CLCE_Multiannual.Rmd'}
 
 ```
+
