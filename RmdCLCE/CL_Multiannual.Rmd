@@ -159,6 +159,8 @@ ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CL
 ```
 
 
+
+
 ```{r, eval = doNextChunkBMS, results='asis'}
 
 cat("#### BMS \n\n")
@@ -221,6 +223,11 @@ ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CL
 
 ```
 
+
+### By vessel length category 
+
+
+
 ### By metier level 6 (top 20)
 
 ```{r}
@@ -238,7 +245,6 @@ ggplot(CLweightS, aes(reorder(topCLSpecies, -CLweight), CLweight/1000, fill = CL
 
 
 
-### By vessel length category 
 
 
 

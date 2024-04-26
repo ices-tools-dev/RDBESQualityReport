@@ -19,7 +19,7 @@ rmarkdown::render("./RmdCLCE/RDBESNationalQualityReport.Rmd",
                     
                     eurostat = TRUE,
                     
-                    prelcatchstat = FALSE,
+                    prelcatchstat = TRUE,
                     
                     prelcatchFile = "../Data/Rec12_05sgy0mmzfee0byudat1u2pw133584160602355104.zip", 
                     
