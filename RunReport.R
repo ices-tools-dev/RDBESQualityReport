@@ -23,9 +23,9 @@ rmarkdown::render("./RmdCLCE/RDBESNationalQualityReport.Rmd",
                     
                     prelcatchFile = "../Data/Rec12_05sgy0mmzfee0byudat1u2pw133584160602355104.zip", 
                     
-                    fleetRegister = FALSE,   # TRUE is not working not yet implemented 
+                    fleetRegister = TRUE,   
                     
-                    fleetRegisterFile = ""
+                    fleetRegisterFile = "../Data/vesselRegistryListResults.zip"
                     
                   ),
                   

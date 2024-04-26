@@ -43,7 +43,7 @@ library(DT)
 # TODO add catHeader to script and load them all at once 
 source("../Functions/read.rdbes.R")
 source("../Functions/read.prelC.R")
-
+source("../Functions/read.fleet.R")
 catHeader <- function(text = "", level = 3) {
     cat(paste0("\n\n", 
                paste(rep("#", level), collapse = ""), 
@@ -232,9 +232,12 @@ prelC <- read.prelC(params$prelcatchFile)
 
 ```{r}
 # 3. Fleet register 
-# The fleet data in the eurostat datasets are not clear. Could they be used? 
+fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
+```{r, child = '04_FleetRegister.Rmd', eval = params$fleetRegister}
+
+```
 
 
 
