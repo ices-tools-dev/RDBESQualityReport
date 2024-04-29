@@ -1,59 +1,12 @@
-```{r title, include = F}
-
-front_title <- "02.Spatial Checks"
-
-```
-
----
-title: `r front_title`
-author: "ICES RDBES ISSG Quality"
-date: "`r format(Sys.time(), '%d %B, %Y')`"
-output: html_document
----
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
-options(scipen=999)
-```
-
-```{r, echo=FALSE, message=FALSE, warning = FALSE}
-# Packages 
-# TODO add automatic install for packages if they do not exist 
-library(icesVocab)
-library(tidyverse)
-library(eurostat)
-library(RDBEScore)
-library(rnaturalearth)
-library(rnaturalearthdata)
-library(sf)
-library(mapplots)
-library(kableExtra)
-library(ggpubr)
-```
+# Spatial checks 
 
 ```{r ReadData, echo=FALSE, message=FALSE, warning = FALSE}
-CE <- createRDBESDataObject("../../../1. NDGP/ndgp.ices.wg.wgrdbesgov/Input/HCE_2023_10_03_152759.zip")
-CE<-CE$CE
+CE_DF <- CE
+CL_DF <- CL
 
-CE_DF <- as.data.frame(CE)
-
-CL <- createRDBESDataObject("../../../1. NDGP/ndgp.ices.wg.wgrdbesgov/Input/HCL_2023_10_03_152130.zip")
-CL<-CL$CL
-
-CL_DF <- as.data.frame(CL)
-
-#Read the rectangle list from the repository 
-url <- "https://github.com/ices-tools-dev/RDBES/raw/master/QC-scripts/RectangleList/ICESRectAreas.csv"
-ICESrect <- read.csv(url, header = TRUE)
 ```
 
 ```{r functions, include = FALSE}
-catHeader <- function(text = "", level = 3) {
-  cat(paste0("\n\n", 
-             paste(rep("#", level), collapse = ""), 
-             " ", text, "\n"))
-}
-
 
 geom_ices_squares <- function (xlim = c(-49,70), ylim = c(36, 85.5),...){
   outside <- F
@@ -91,7 +44,7 @@ CE_DF$topMetiers <- ifelse(is.na(CE_DF$Top20metiers),"OTH",CE_DF$CEmetier6)
 # Find top 20 metiers according to the landed value
 top20_metiers_lv <- CL_DF %>%
   group_by(CLmetier6) %>%
-  summarise(lvTot=sum(as.numeric(CLtotOffLanVal))) %>%
+  summarise(lvTot=sum(as.numeric(CLlandingsValue))) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_metiers_lv$Top20metiers <- "X"
@@ -104,7 +57,7 @@ CL_DF$topMetiers <- ifelse(is.na(CL_DF$Top20metiers),"OTH",CL_DF$CLmetier6)
 
 ### CE 
 
-Area and ICES rectangle in the CE data (CEArea, CEstatRect) set is compared with area/rectangle relationship ICES reference list. 
+Area and ICES rectangle in the CE data (CEarea, CEstatRect) set is compared with area/rectangle relationship ICES reference list. 
 The expected area related to the ICES rectangle is found in the column ICESAreaWithRectangle.
 Note that -9 is allowed as unknown ICES rectangle.
 
@@ -116,17 +69,17 @@ CE_sq <- CE_sq[CE_sq$CEstatRect != "-9",]
 CE_sq$t <- 1
 
 CE_sq1 <- CE_sq %>%
-  group_by(CEvesFlagCou, CEstatRect, CEArea) %>%
+  group_by(CEvesFlagCou, CEstatRect, CEarea) %>%
   summarise(t=sum(t))
 
 
 CE_sq2 <- CE_sq1 %>% 
-  left_join(ICESrect, by= c("CEArea" = "Area", "CEstatRect"="ICESNAME")) %>%
+  left_join(ICESrect, by= c("CEarea" = "Area", "CEstatRect"="ICESNAME")) %>%
   select(-Area_27)
 
 CE_sq3 <- CE_sq2[is.na(CE_sq2$sq_check),]
 
-CE_sq4 <- subset(CE_sq3, select=c(CEvesFlagCou, CEstatRect, CEArea))
+CE_sq4 <- subset(CE_sq3, select=c(CEvesFlagCou, CEstatRect, CEarea))
 
 CE_sq5<- CE_sq4 %>% 
   left_join(ICESrect[c("ICESNAME","Area")], by = c("CEstatRect"="ICESNAME"))%>% 
@@ -135,14 +88,14 @@ CE_sq5<- CE_sq4 %>%
   
     cat("\n")
     cat("\n")
-    cat("<b>Overview of CE data with wrong/unexpected CEArea</b>\n\n")
+    cat("<b>Overview of CE data with wrong/unexpected CEarea</b>\n\n")
 
 DT::datatable(CE_sq5, filter = 'top')    
 
     cat("\n")
     cat("\n")
-    cat("<b>CEid's with wrong/unexpected CEArea</b>\n\n")
-    cat("Based on the previous identified rectangles, an overview of all CEid for which the CEArea has been identified to not match with the corresponding area in the ICES reference list.\n\n")
+    cat("<b>CEid's with wrong/unexpected CEarea</b>\n\n")
+    cat("Based on the previous identified rectangles, an overview of all CEid for which the CEarea has been identified to not match with the corresponding area in the ICES reference list.\n\n")
     
 CE_DF_wrong_areas <- data.frame()
 
@@ -150,8 +103,8 @@ for (i in 1:nrow(CE_sq5)) {
   filtered_data <- CE_DF %>%
     filter(CEvesFlagCou == CE_sq5$CEvesFlagCou[i] & 
            CEstatRect == CE_sq5$CEstatRect[i] & 
-           CEArea == CE_sq5$CEArea[i]) %>%
-    select(CEid, CEvesFlagCou, CEyear, CEMonth, CEstatRect, CEArea, CEmetier6, CEvesLenCat, CEencrypVesIds)
+           CEarea == CE_sq5$CEarea[i]) %>%
+    select(CEid, CEvesFlagCou, CEyear, CEmonth, CEstatRect, CEarea, CEmetier6, CEvesLenCat, CEencrypVesIds)
   
   CE_DF_wrong_areas <- bind_rows(CE_DF_wrong_areas, filtered_data)
 }

@@ -5,15 +5,15 @@ Description about the data source.
 
 ```{r}
 prelC1 <- gather(prelC,  CatchCategory, PrelCWeight, -c(Year, AphiaID, Species.Latin.Name, Area, Country))
-prelC1 <- filter(prelC1, Country %in%  unique(CL$CLlandingCountry))
+prelC1 <- filter(prelC1, Country %in%  unique(CL$CLlanCou))
 
 CL1 <- CL %>%
-  group_by(CLarea, CLyear, CLlandingCountry, CLcatchCategory, CLspeciesCode, LatinName) %>%
-  summarise(CLofficialWeight = sum(CLofficialWeight, na.rm = TRUE),
-            CLscientificWeight = sum(CLscientificWeight, na.rm = TRUE))
+  group_by(CLarea, CLyear, CLlanCou, CLcatchCat, CLspecCode, LatinName) %>%
+  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
 CL2 <- filter(CL1, CLyear %in% unique(prelC1$Year))
 
-prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLlandingCountry", "AphiaID" = "CLspeciesCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCategory"))
+prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLlanCou", "AphiaID" = "CLspecCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCat"))
 
 # Change to kg 
 prelCatches$PrelCWeight <- prelCatches$PrelCWeight*1000

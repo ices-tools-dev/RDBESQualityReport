@@ -7,8 +7,6 @@ output:
     number_sections: true
     toc_float: true
 params:
-  year: year
-  region: region
   RDBESfile: RDBESfile
   eurostat: eurostat
   prelcatchstat: prelcatchstat
@@ -25,23 +23,35 @@ options(scipen=999)
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT")
+list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
+
+if(!"RDBEScore" %in% installed.packages()[,"Package"]){
+  remotes::install_github("ices-tools-dev/RDBEScore", build_vignettes = TRUE)
+}
 
 # Loads packages 
 library(icesVocab)
 library(tidyverse, quietly = TRUE)
 library(eurostat)
 library(DT)
-# library(RDBEScore)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(sf)
+library(mapplots)
+library(kableExtra)
+library(ggpubr)
+library(RDBEScore)
+
 ```
 
 
 ```{r}
 # Functions 
 # TODO add catHeader to script and load them all at once 
-source("../Functions/read.rdbes.R")
+# source("../Functions/read.rdbes.R")
+source("../Functions/rdbes.fc.R")
 source("../Functions/read.prelC.R")
 source("../Functions/read.fleet.R")
 catHeader <- function(text = "", level = 3) {
@@ -53,6 +63,8 @@ catHeader <- function(text = "", level = 3) {
 ```
 
 ```{r}
+# Read auxiliary files 
+# RCG areas 
 url <- "https://raw.githubusercontent.com/ices-eg/RCGs/master/Metiers/Reference_lists/AreaRegionLookup.csv"
 Area <- read.csv(url, header = TRUE)
 ### Fix the extra space in rcg region code
@@ -60,18 +72,28 @@ Area <- mutate(Area, Code = ifelse(Code %in% "NSEA                              
                              ifelse(Code %in% "NAtl                                      ", "NAtl", Code))) %>%
   select(AreaCode, Code)
 
+#Read the rectangle list from the repository 
+url <- "https://github.com/ices-tools-dev/RDBES/raw/master/QC-scripts/RectangleList/ICESRectAreas.csv"
+ICESrect <- read.csv(url, header = TRUE)
+
 ```
 
 
 
 ```{r}
 # Read RDBES CL, CE files 
-# df <- createRDBESDataObject(params$RDBESfile) # overwrites if given multiple zip files with the same tables
-# check what happens if all years are in one zip folder when time series are uploaded 
+df <- createRDBESDataObject(input = params$RDBESfile) 
 # For now use this 
-df <- read.rdbes(params$RDBESfile)
-CL <- as.data.frame(df[1])
-CE <- as.data.frame(df[2])
+# df <- read.rdbes(params$RDBESfile)
+CL <- as.data.frame(df[["CL"]])
+CE <- as.data.frame(df[["CE"]])
+
+# Change class of some fields for plotting 
+CL <- rdbes.fc(CL)
+# Quick fix of CE col names - inconsistency between CE-CL lowercase and upper case for some fields 
+names(CE)[names(CE) == 'CEMonth'] <- 'CEmonth'
+names(CE)[names(CE) == 'CEArea'] <- 'CEarea'
+CE <- rdbes.fc(CE)
 ```
 
 ```{r}
@@ -99,7 +121,7 @@ title: `r titleR`
 ScName <- getCodeList("SpecWorms") %>%
   select(Description, Key) %>%
   rename(LatinName = Description)
-CL <- left_join(CL, ScName, by = c("CLspeciesCode" = "Key")) 
+CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key")) 
 ```
 
 ```{r}
@@ -156,20 +178,20 @@ tabN %>%
 ```{r}
 # Number of unique vessels by year 
 
-CLv <- select(CL, CLyear, CLencryptedVesselIds) %>%
+CLv <- select(CL, CLyear, CLencrypVesIds) %>%
   distinct() %>%
-  separate_rows(CLencryptedVesselIds, convert = TRUE) %>%
+  separate_rows(CLencrypVesIds, convert = TRUE) %>%
   distinct() %>%
   group_by(CLyear) %>%
-  summarise(NumberOfUniqueVessels = length(unique(CLencryptedVesselIds))) %>%
+  summarise(NumberOfUniqueVessels = length(unique(CLencrypVesIds))) %>%
   mutate(Dataset = "CL") %>%
   rename(Year = CLyear)
-CEv <- select(CE, CEyear, CEencryptedVesselIds) %>%
+CEv <- select(CE, CEyear, CEencrypVesIds) %>%
   distinct() %>%
-  separate_rows(CEencryptedVesselIds, convert = TRUE) %>%
+  separate_rows(CEencrypVesIds, convert = TRUE) %>%
   distinct()%>%
   group_by(CEyear) %>%
-  summarise(NumberOfUniqueVessels = length(unique(CEencryptedVesselIds)))%>%
+  summarise(NumberOfUniqueVessels = length(unique(CEencrypVesIds)))%>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
 
@@ -184,7 +206,7 @@ tabV %>%
 # Number of species
 CLsp <- CL %>%
   group_by(CLyear) %>%
-  summarise(NumberOfSpecies = length(unique(CLspeciesCode)))
+  summarise(NumberOfSpecies = length(unique(CLspecCode)))
 
 CLsp %>%
   datatable(caption = "Number of species by year in the CL table" , colnames = c("Year" = 1), rownames = FALSE, options = list(dom = 't'))
@@ -207,7 +229,7 @@ cat("# Comparison with auxiliary data sources")
 ```{r, eval = params$eurostat}
 # Auxiliary information for comparisons 
 # 1. Eurostat data - weight 
-eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
+eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlanCou)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
 # https://ec.europa.eu/eurostat/databrowser/view/tag00076/default/table?lang=en&category=t_fish
 
 # 2. Eurostat data - number of vessels 
@@ -225,7 +247,7 @@ prelC <- read.prelC(params$prelcatchFile)
 ```
 
 
-```{r,  child = '03_PreliminaryCatches.Rmd', eval = params$prelcatchstat}
+```{r,  child = '02_PreliminaryCatches.Rmd', eval = params$prelcatchstat}
 
 ```
 
@@ -235,22 +257,22 @@ prelC <- read.prelC(params$prelcatchFile)
 fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
-```{r, child = '04_FleetRegister.Rmd', eval = params$fleetRegister}
+```{r, child = '03_FleetRegister.Rmd', eval = params$fleetRegister}
 
 ```
 
 
-
-```{r, child = 'CL_Multiannual.Rmd'}
-
-```
-
-```{r, child = 'CE_Multiannual.Rmd'}
+```{r, child = '04_CL_Multiannual.Rmd'}
 
 ```
 
 
-```{r, child = 'CLCE_Multiannual.Rmd'}
+```{r, child = '05_CE_Multiannual.Rmd'}
+
+```
+
+
+```{r, child = '07_Spatial_checks.Rmd'}
 
 ```
 

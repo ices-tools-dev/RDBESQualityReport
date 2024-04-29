@@ -7,7 +7,7 @@
 CEtr <- CE %>% 
   group_by(CEyear) %>%
   summarise(CEnumberOfFractionalTrips = sum(CEnumberOfFractionalTrips, na.rm = TRUE),
-            CEnumberOfDominantTrips = sum(CEnumberOfDominantTrips, na.rm = TRUE))
+            CEnumDomTrip = sum(CEnumDomTrip, na.rm = TRUE))
 
 CEtr1 <- gather(CEtr, NumberofTripsSource, NumberofTrips, -CEyear)
 
@@ -23,7 +23,7 @@ CEtr %>%
 
 ```
 ```{r}
-ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumberOfDominantTrips)) +
+ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumDomTrip)) +
   geom_point() +
   facet_grid(.~CEyear)
 ```
@@ -35,12 +35,12 @@ ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumberOfDominantTrips)) +
 ```{r}
 CEfd <- CE %>%
   group_by(CEyear) %>%
-  summarise(CEscientificFishingDays = sum(CEscientificFishingDays, na.rm = TRUE))
+  summarise(CEsciFishDay = sum(CEsciFishDay, na.rm = TRUE))
 ```
 
 
 ```{r}
-ggplot(CE, aes(CEscientificFishingDays, CEscientificDaysAtSea)) +
+ggplot(CE, aes(CESciDaySea, CEsciFishDay)) +
   geom_point() +
   facet_grid(.~CEyear)
 ```
