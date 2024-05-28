@@ -14,9 +14,9 @@ rmarkdown::render("./RmdCLCE/RDBESNationalQualityReport.Rmd",
                     
                     RDBESfile = c("../Data/HCE_2024_04_24_075857.zip", "../Data/HCL_2024_04_24_075836.zip"),
                     
-                    eurostat = FALSE,
+                    eurostat = TRUE,
                     
-                    prelcatchstat = FALSE,
+                    prelcatchstat = TRUE,
                     
                     prelcatchFile = "../Data/Rec12_05sgy0mmzfee0byudat1u2pw133584160602355104.zip", 
                     

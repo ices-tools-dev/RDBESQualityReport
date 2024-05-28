@@ -3,6 +3,16 @@
 
 ## Weight summary 
 
+
+```{r}
+# Transform kg to t 
+CL$CLoffWeight <- CL$CLoffWeight/1000
+CL$CLsciWeight <- CL$CLsciWeight/1000
+
+```
+
+
+
 ```{r}
 
 # Total weights (sci, off) by year & catch category 
@@ -14,10 +24,11 @@ CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLcatchCat))
 
 ggplot(CLw, aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLcatchCat~.) +
+  facet_grid(CLcatchCat~., scales = "free") +
   theme_bw() +
   theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) 
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Weight (t)")
 ```
 
 ```{r}

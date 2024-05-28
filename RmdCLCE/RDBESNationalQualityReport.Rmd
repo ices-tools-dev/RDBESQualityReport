@@ -39,6 +39,7 @@ library(DT)
 library(rnaturalearth)
 library(rnaturalearthdata)
 library(sf)
+library(knitr)
 library(mapplots)
 library(kableExtra)
 library(ggpubr)
@@ -125,15 +126,18 @@ CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key"))
 ```
 
 ```{r}
-
-# CL$CLcatchCategory <- "RegDis"
+# For testing
+CL$CLcatchCat[1:50] <- "BMS"
+CL$CLcatchCat[51:100] <- "RegDis"
 # CL$CLregDisCategory <- "Deminimis"
 
 ```
 
+This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its primary purpose is to serve as a resource for data submitters, helping them identify and correct potential errors before the submission deadline. By utilizing this script, data submitters can improve the accuracy and completeness of their data, thereby improving the overall quality and reliability of the submitted information. The output shown herein is designed to assist users in reviewing their data, facilitating a smoother and more efficient submission process. 
+
 # Summary 
 
-Add text with a brief summary describing what the document's purpose is etc. 
+The following tables show summary values between the years. If the difference between the years exceeds 30% they are highlighted with red. The most recent year is taken as reference. 
 
 ```{r}
 # Number of records 
@@ -147,11 +151,21 @@ CEr <- CE %>%
   count() %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
-tabN <- rbind(CLr, CEr) %>%
+
+tabN1 <- rbind(CLr, CEr)  %>%
+  group_by(Dataset) %>%
+  mutate(Pos =  (0.3 * n[which.max(Year)] + n[which.max(Year)]),
+         Neg = abs(0.3 * n[which.max(Year)] - n[which.max(Year)]),
+         n = cell_spec(n, color = ifelse(n <= Pos & n >= Neg, "black", "red")))
+
+tabN2 <- tabN1 %>%
+  select(Year, n, Dataset) %>%
   spread(Year, n) 
 
-tabN %>%
-  datatable(caption = "Number of records in the CL and CE tables by year", options = list(dom = 't'))
+
+kbl(tabN2, escape = F, caption = "Number of records in the CE and CL tables by year") %>%
+  kable_styling(bootstrap_options = "striped")
+
 ```
 
 
@@ -167,11 +181,21 @@ CEm <- CE %>%
   summarise(Nmet = length(unique(CEmetier6))) %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
-tabN <- rbind(CLm, CEm) %>%
+
+tabm1 <- rbind(CLm, CEm) %>%
+  group_by(Dataset) %>%
+  mutate(Pos =  (0.3 * Nmet[which.max(Year)] + Nmet[which.max(Year)]),
+         Neg = abs(0.3 * Nmet[which.max(Year)] - Nmet[which.max(Year)]),
+         Nmet = cell_spec(Nmet, color = ifelse(Nmet <= Pos & Nmet >= Neg, "black", "red")))
+
+tabm2 <- tabm1 %>%
+  select(Year, Nmet, Dataset) %>%
   spread(Year, Nmet) 
 
-tabN %>%
-  datatable(caption = "Number of unique metiers level 6 in the CL and CE tables by year", options = list(dom = 't'))
+
+kbl(tabm2, escape = F, caption = "Number of unique metiers level 6 in the CE and CL tables by year") %>%
+  kable_styling(bootstrap_options = "striped")
+
 
 ```
 
@@ -195,10 +219,20 @@ CEv <- select(CE, CEyear, CEencrypVesIds) %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
 
-tabV <- rbind(CLv, CEv)%>%
+tabv1 <- rbind(CLv, CEv) %>%
+  group_by(Dataset) %>%
+  mutate(Pos =  (0.3 * NumberOfUniqueVessels[which.max(Year)] + NumberOfUniqueVessels[which.max(Year)]),
+         Neg = abs(0.3 * NumberOfUniqueVessels[which.max(Year)] - NumberOfUniqueVessels[which.max(Year)]),
+         Nmet = cell_spec(NumberOfUniqueVessels, color = ifelse(NumberOfUniqueVessels <= Pos & NumberOfUniqueVessels >= Neg, "black", "red")))
+
+tabv2 <- tabv1 %>%
+  select(Year, NumberOfUniqueVessels, Dataset) %>%
   spread(Year, NumberOfUniqueVessels) 
-tabV %>%
-  datatable(caption = "Number of unique vessels in the CL and CE tables by year", options = list(dom = 't'))
+
+
+kbl(tabv2, escape = F, caption = "Number of unique vessels in the CE and CL tables by year") %>%
+  kable_styling(bootstrap_options = "striped")
+
 ```
 
 
@@ -267,12 +301,12 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
 
-```{r, child = '05_CE_Multiannual.Rmd'}
+<!-- ```{r, child = '05_CE_Multiannual.Rmd'} -->
 
-```
+<!-- ``` -->
 
 
-```{r, child = '07_Spatial_checks.Rmd'}
+<!-- ```{r, child = '07_Spatial_checks.Rmd'} -->
 
-```
+<!-- ``` -->
 

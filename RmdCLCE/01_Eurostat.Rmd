@@ -1,30 +1,34 @@
 
 ## Eurostat 
 
-Description about the data source. 
+The comparison is based on annually summarized CL data and the [Eurostat data](https://ec.europa.eu/eurostat/databrowser/view/tag00076/default/table?lang=en&category=t_fish), filtered by vessel flag country. Only the years with corresponding CL data are shown, as well as the most recent data year if provided. 
+
+
 
 ```{r}
 CLToT <- CL %>%
   filter(CLcatchCat %in% "Lan") %>%
-  group_by(CLlanCou, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE)/1000,
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)/1000) 
+  group_by(CLvesFlagCou, CLyear) %>%
+  summarise(CLoffWeight = round(sum(CLoffWeight, na.rm = TRUE)/1000, digits = 0),
+            CLsciWeight = round(sum(CLsciWeight, na.rm = TRUE)/1000, digits = 0)) 
 
 eurostatW <- mutate(eurostatW, 
+                    values = round(values, digits = 0),
                     time = as.character(time)) %>%
   add_row(time = max(CL$CLyear), # add the most recent year in the CL even though the eurostat data will not be released by then 
-          geo = unique(CL$CLlanCou))
+          geo = unique(CL$CLvesFlagCou))
 
-eurostatComp <- left_join(eurostatW, CLToT, by = c("time"  ="CLyear", "geo" = "CLlanCou"))
+eurostatComp <- left_join(eurostatW, CLToT, by = c("time"  ="CLyear", "geo" = "CLvesFlagCou"))
 
 eurostatComp <- select(eurostatComp, geo:CLsciWeight) %>%
-  rename(CLlanCou = geo,
+  rename(CLvesFlagCou = geo,
          CLyear =  time, 
          EurostatWeight = values)
+eurostatComp <- filter(eurostatComp, !(is.na(CLoffWeight) & is.na(CLsciWeight)))
 ```
 
 ```{r}
-eurostatComp1 <- gather(eurostatComp, WeightSource, Weight, -CLyear, -CLlanCou)
+eurostatComp1 <- gather(eurostatComp, WeightSource, Weight, -CLyear, -CLvesFlagCou)
 ggplot(eurostatComp1, aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
   ylab("Landed weight (t)") +
