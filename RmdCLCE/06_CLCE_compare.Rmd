@@ -1,46 +1,44 @@
 
 # CL & CE 
 
-## Comparison of CE and CL unique keys 
+The following analysis allows to check if landings have corresponding effort. This is done by merging CE and CL data sets using unique keys consisting of the following fields: Vessel flag country, Year, Quarter, Month, Area, Statistical rectangle, Fisheries management unit, GSA subarea, Jurisdiction area, Fishing area category, Fresh water name, Exclusive Economic Zone (EEZ), National fishing activity, Metier 6 fishing activity, Incidential by catch mitigation device, Landing location, Vessel length category, Fishing Technique, Mesh size range, Supra Region, Geographical indicator, Specific conditions to technical measures, Deep Sea Regulation.
 
-Description about the data source. 
+## Number of unique keys in CE and CL data sets
 
 ```{r}
-CEkeyColumns <- c("CErecordType","CEvesselFlagCountry","CEyear","CEquarter","CEmonth" ,"CEarea",                                
-                  "CEstatisticalRectangle","CEfisheriesManagementUnit","CEgsaSubarea",                          
-                  "CEjurisdictionArea","CEfishingAreaCategory","CEfreshWaterName",                      
-                  "CEexclusiveEconomicZone","CEnationalFishingActivity","CEmetier6",                             
-                  "CEincidentalByCatchMitigationDevice","CElandingLocation",                     
-                  "CEvesselLengthCategory","CEfishingTechnique","CEmeshSizeRange",                       
-                  "CEsupraRegion","CEgeoIndicator","CEspecificConditionsTechnical",         
-                  "CEdeepSeaRegulation")
-CLkeyColumns <- c("CLrecordType","CLvesselFlagCountry","CLyear","CLquarter","CLmonth" ,"CLarea",                                
-                  "CLstatisticalRectangle","CLfisheriesManagementUnit","CLgsaSubarea",                          
-                  "CLjurisdictionArea","CLfishingAreaCategory","CLfreshWaterName",                      
-                  "CLexclusiveEconomicZone","CLnationalFishingActivity","CLmetier6",                             
-                  "CLincidentalByCatchMitigationDevice","CLlandingLocation",                     
-                  "CLvesselLengthCategory","CLfishingTechnique","CLmeshSizeRange",                       
-                  "CLsupraRegion","CLgeoIndicator","CLspecificConditionsTechnical",         
-                  "CLdeepSeaRegulation")
+CEkeyColumns <- c("CErecType","CEvesFlagCou","CEyear","CEquar","CEmonth",
+                  "CEarea","CEstatRect","CEfishManUnit","CEgsaSubarea",
+                  "CEjurisdArea","CEfishAreaCat","CEfreshWatNam","CEeconZone",
+                  "CEnatFishAct","CEmetier6","CEIBmitiDev","CEloc",
+                  "CEvesLenCat","CEfishTech","CEmesSizRan","CEsupReg",
+                  "CEgeoInd","CEspeConTech","CEdeepSeaReg" )
+
+CLkeyColumns <- c("CLrecType","CLvesFlagCou","CLyear","CLquar","CLmonth",
+                  "CLarea","CLstatRect","CLfishManUnit","CLgsaSubarea",
+                  "CLjurisdArea","CLfishAreaCat","CLfreshWatNam","CLeconZone",
+                  "CLnatFishAct","CLmetier6","CLIBmitiDev","CLloc",
+                  "CLvesLenCat","CLfishTech","CLmesSizRan","CLsupReg",
+                  "CLgeoInd","CLspeConTech","CLdeepSeaReg")
 
 CEkeys <- CE %>%
   group_by_at(CEkeyColumns) %>% 
-  summarise(CEscientificDaysAtSea = sum(CEscientificDaysAtSea, na.rm=T))
+  summarise(CESciDaySea = sum(CESciDaySea, na.rm=T),
+            CEsciFishDay = sum(CEsciFishDay, na.rm = T))
 colnames(CEkeys) <- sub("^CE","",colnames(CEkeys))
 
 CLkeys <- CL %>%
   group_by_at(CLkeyColumns) %>% 
-  summarise(CLscientificWeight = sum(CLscientificWeight, na.rm=T))
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm=T))
 colnames(CLkeys) <- sub("^CL","",colnames(CLkeys))
 
 keysSummary <- CEkeys %>% 
   rbind(CLkeys) %>% 
-  group_by(vesselFlagCountry,year,recordType) %>% 
+  group_by(vesFlagCou,year,recType) %>% 
   summarise(n=n())
 
-ggplot(keysSummary, aes(year, n, fill = recordType)) +
+ggplot(keysSummary, aes(year, n, fill = recType)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~vesselFlagCountry, scales = "free_y")+
+  facet_wrap(~vesFlagCou, scales = "free_y")+
   labs(y = "Number of unique keys",
        x = "Year",
        fill = "Record type",
@@ -48,11 +46,9 @@ ggplot(keysSummary, aes(year, n, fill = recordType)) +
 
 ```
 
-Landings without corresponding effort
+## Landings without corresponding effort
 
 ```{r}
-
-
 
 lanWoEffort <- CLkeys %>% 
   anti_join(CEkeys, by = colnames(CEkeys)[2:24])
@@ -60,6 +56,31 @@ rmarkdown::paged_table(lanWoEffort)
 
 ```
 
+## Tons per fishing day calculated from merged CE and CL data sets.
 
+```{r}
+CECL <- CEkeys %>% 
+  inner_join(CLkeys, by = colnames(CEkeys)[2:24]) %>% 
+  mutate(tonsPerFishingDay = sciWeight / sciFishDay,
+         gearType = substr(metier6,1,3))
+
+CECL %>% 
+ggplot(aes(gearType, tonsPerFishingDay)) +
+  geom_boxplot(outlier.color = "red3") +
+  facet_wrap(~vesLenCat, scales = "free")+
+  labs(y = "Tons per fishing day",
+       x = "Gear type",
+       title = "Tons per fishing day by gear and vessel length")
+
+CECL %>% 
+  ggplot(aes(vesLenCat, tonsPerFishingDay)) +
+  geom_boxplot(outlier.color = "red3") +
+  facet_wrap(~gearType, scales = "free")+
+  labs(y = "Tons per fishing day",
+       x = "Vessel length",
+       title = "Tons per fishing day by and vessel length and gear")+
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+
+```
 
 
