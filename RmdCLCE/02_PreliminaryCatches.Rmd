@@ -16,7 +16,7 @@ CL2 <- filter(CL1, CLyear %in% unique(prelC1$Year))
 prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLlanCou", "AphiaID" = "CLspecCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCat"))
 
 # Change to kg 
-prelCatches$PrelCWeight <- prelCatches$PrelCWeight*1000
+prelCatches$PrelCWeight <- prelCatches$PrelCWeight
 
 # Gather 
 prelCatches <- gather(prelCatches, WeightSource, Weight, -c(Year, Species.Latin.Name, Area, Country, CatchCategory, AphiaID))
