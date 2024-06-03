@@ -5,15 +5,6 @@
 
 
 ```{r}
-# Transform kg to t 
-CL$CLoffWeight <- round(CL$CLoffWeight/1000, digits = 0)
-CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 0)
-
-```
-
-
-
-```{r}
 
 # Total weights (sci, off) by year & catch category 
 CLw <- CL %>%
