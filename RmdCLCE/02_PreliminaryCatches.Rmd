@@ -1,7 +1,7 @@
 
 ## Preliminary ICES catches 
 
-Description about the data source. 
+The [preliminary catch statistics](https://data.ices.dk/rec12/login.aspx) of the most recent data year provided to ICES are compared by species and area.
 
 ```{r}
 prelC1 <- gather(prelC,  CatchCategory, PrelCWeight, -c(Year, AphiaID, Species.Latin.Name, Area, Country))

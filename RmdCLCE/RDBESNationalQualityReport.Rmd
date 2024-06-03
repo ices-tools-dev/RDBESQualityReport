@@ -17,13 +17,13 @@ params:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 14)
-options(scipen=999)
+options(scipen=999, viewer=NULL)
 ```
 
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes")
+list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -44,6 +44,7 @@ library(mapplots)
 library(kableExtra)
 library(ggpubr)
 library(RDBEScore)
+library(htmltools)
 
 ```
 
@@ -95,6 +96,15 @@ CL <- rdbes.fc(CL)
 names(CE)[names(CE) == 'CEMonth'] <- 'CEmonth'
 names(CE)[names(CE) == 'CEArea'] <- 'CEarea'
 CE <- rdbes.fc(CE)
+
+
+## Get metier lvl 4 
+CL <- mutate(CL, CLmetier4 = str_extract(CLmetier6, "[^_]+"))
+CE <- mutate(CE, CEmetier4 = str_extract(CEmetier6, "[^_]+"))
+
+## Get metier lvl 5 
+CL <- mutate(CL, CLmetier5 = str_extract(CLmetier6,  "[^_]*_[^_]*"))
+CE <- mutate(CE, CEmetier5 = str_extract(CEmetier6,  "[^_]*_[^_]*"))
 ```
 
 ```{r}
@@ -242,9 +252,6 @@ CLsp <- CL %>%
   group_by(CLyear) %>%
   summarise(NumberOfSpecies = length(unique(CLspecCode)))
 
-CLsp %>%
-  datatable(caption = "Number of species by year in the CL table" , colnames = c("Year" = 1), rownames = FALSE, options = list(dom = 't'))
-
 ```
 
 
@@ -301,18 +308,24 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
 
-<!-- ```{r, child = '05_CE_Multiannual.Rmd'} -->
+```{r, child = '05_CE_Multiannual.Rmd'}
 
-<!-- ``` -->
+```
+
+
+
+
 
 ```{r, child = '06_CLCE_compare.Rmd'}
 
 ```
 
 
-<!-- ```{r, child = '07_Spatial_checks.Rmd'} -->
 
-<!-- ``` -->
+
+```{r, child = '07_Spatial_checks.Rmd'}
+
+```
 
 
 
