@@ -17,23 +17,28 @@ Comparisons with other data sources require to download the most recent [ICES pr
 
 ## Usage
 
-You can clone the repository from the main branch locally or you can download the code in a zip folder and store it in a dedicated folder.
+You can clone the repository from the main branch to your local enviroment or you can download the code in a zip folder and store it in a dedicated folder. The script to run the report is named:
 
-You then need to define the local path to where the report and data are stored in the respective fields. If you want the report to produce the comparison with the auxiliary data you need to set the field values of eurostat and prelcatchstat to TRUE.
+> RunReport.R
+
+In this script you have to define the local path to where the report Rmarkdown and data are stored in the respective fields. If you want the report to produce the comparison with the auxiliary data you need to set the field values of eurostat and prelcatchstat to TRUE.
+
+> [!IMPORTANT]\
+> No preprocessing is required for the data. The script works with the exported zip files.
 
 ``` r
 
-rmarkdown::render("/RmdCLCE/RDBESNationalQualityReport.Rmd", 
+rmarkdown::render("path the the report folder/RDBESNationalQualityReport.Rmd", 
                   
                   params = list(
                     
-                    RDBESfile = c("path to where the commercial effort file is", "path to where the commercial landings file is"),
+                    RDBESfile = c("path to the commercial effort file", "path to the commercial landings"),
                     
                     eurostat = TRUE,
                     
                     prelcatchstat = TRUE,
                     
-                    prelcatchFile = "path the where the ICES preliminary catch statistics file is", 
+                    prelcatchFile = "path to the ICES preliminary catch statistics", 
                     
                     fleetRegister = FALSE,   
                     
@@ -42,7 +47,9 @@ rmarkdown::render("/RmdCLCE/RDBESNationalQualityReport.Rmd",
                   ),
                   
                   # The path to where the report is saved 
-                  output_dir = "/ReportOutput")
+                  output_dir = "path to the report output folder/ReportOutput")
 ```
 
 ## Feedback
+
+If you encounter any issues or would like to propose new features please open an issue under this repository.
