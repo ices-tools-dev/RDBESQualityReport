@@ -320,9 +320,6 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
 
-
-
-
 ```{r, child = '06_CLCE_compare.Rmd'}
 
 ```

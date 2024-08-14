@@ -9,8 +9,8 @@ The comparison is based on annually summarized CL data and the [Eurostat data](h
 CLToT <- CL %>%
   filter(CLcatchCat %in% "Lan") %>%
   group_by(CLvesFlagCou, CLyear) %>%
-  summarise(CLoffWeight = round(sum(CLoffWeight, na.rm = TRUE)/1000, digits = 0),
-            CLsciWeight = round(sum(CLsciWeight, na.rm = TRUE)/1000, digits = 0)) 
+  summarise(CLoffWeight = round(sum(CLoffWeight, na.rm = TRUE), digits = 0),
+            CLsciWeight = round(sum(CLsciWeight, na.rm = TRUE), digits = 0)) 
 
 eurostatW <- mutate(eurostatW, 
                     values = round(values, digits = 0),
