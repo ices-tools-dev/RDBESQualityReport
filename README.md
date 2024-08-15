@@ -24,15 +24,15 @@ You can clone the repository from the main branch to your local enviroment or yo
 In this script you have to define the local path to where the report Rmarkdown and data are stored in the respective fields. If you want the report to produce the comparison with the auxiliary data you need to set the field values of eurostat and prelcatchstat to TRUE.
 
 > [!IMPORTANT]\
-> No preprocessing is required for the data. The script works with the exported zip files.
+> No pre-processing is required for the data. The script works with the exported zip files.
 
 ``` r
 
-rmarkdown::render("path the the report folder/RDBESNationalQualityReport.Rmd", 
+rmarkdown::render("path the the Rmd document folder/rmd/RDBESNationalQualityReport.Rmd", 
                   
                   params = list(
                     
-                    RDBESfile = c("path to the commercial effort file", "path to the commercial landings"),
+                    RDBESfile = c("path to the commercial effort", "path to the commercial landings"),
                     
                     eurostat = TRUE,
                     
