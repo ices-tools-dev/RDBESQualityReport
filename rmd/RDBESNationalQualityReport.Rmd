@@ -146,7 +146,7 @@ This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its prim
 
 # Summary 
 
-The following tables show summary values between the years. If the difference between the years exceeds 30% they are highlighted with red. The most recent year is taken as reference. 
+The following tables show summary values between the years. If the difference between the years exceeds 30% they are highlighted <span style="color:red">red</span>. The most recent year is used for the comparison. 
 
 ```{r}
 # Number of records 
@@ -172,8 +172,9 @@ tabN2 <- tabN1 %>%
   spread(Year, n) 
 
 
-kbl(tabN2, escape = F, caption = "Number of records in the CE and CL tables by year") %>%
-  kable_styling(bootstrap_options = "striped")
+kbl(tabN2, escape = F, caption = "Number of records in the CE and CL tables by year", align = rep("c", ncol(tabN2))) %>%
+  kable_styling(bootstrap_options = "striped" )
+cat("\n")
 
 ```
 
@@ -202,7 +203,7 @@ tabm2 <- tabm1 %>%
   spread(Year, Nmet) 
 
 
-kbl(tabm2, escape = F, caption = "Number of unique metiers level 6 in the CE and CL tables by year") %>%
+kbl(tabm2, escape = F, caption = "Number of unique metiers level 6 in the CE and CL tables by year", align = rep("c", ncol(tabm2))) %>%
   kable_styling(bootstrap_options = "striped")
 
 
@@ -239,7 +240,7 @@ tabv2 <- tabv1 %>%
   spread(Year, NumberOfUniqueVessels) 
 
 
-kbl(tabv2, escape = F, caption = "Number of unique vessels in the CE and CL tables by year") %>%
+kbl(tabv2, escape = F, caption = "Number of unique vessels in the CE and CL tables by year", align = rep("c", ncol(tabv2))) %>%
   kable_styling(bootstrap_options = "striped")
 
 ```
