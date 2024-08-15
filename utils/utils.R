@@ -153,7 +153,7 @@ rdbes.fc <- function(x){
 #' @examples
 
 
-
+# https://stackoverflow.com/questions/53444333/dynamic-tabsets-with-multiple-plots-r-markdown
 catHeader <- function(text = "", level = 3) {
   cat(paste0("\n\n", 
              paste(rep("#", level), collapse = ""), 

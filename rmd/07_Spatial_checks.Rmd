@@ -90,7 +90,7 @@ CE_sq5<- CE_sq4 %>%
     cat("\n")
     cat("<b>Overview of CE data with wrong/unexpected CEarea</b>\n\n")
 
-DT::datatable(CE_sq5, filter = 'top')    
+DT::datatable(CE_sq5, filter = 'top', rownames = FALSE)    
 
     cat("\n")
     cat("\n")
@@ -109,7 +109,7 @@ for (i in 1:nrow(CE_sq5)) {
   CE_DF_wrong_areas <- bind_rows(CE_DF_wrong_areas, filtered_data)
 }
 
-DT::datatable(CE_DF_wrong_areas, filter = 'top')
+DT::datatable(CE_DF_wrong_areas, filter = 'top', rownames = FALSE)
 ```
 
 ### CL
@@ -147,7 +147,7 @@ CL_sq5<- CL_sq4 %>%
     cat("\n")
     cat("<b>Overview of CL data with wrong/unexpected CLarea</b>\n\n")
 
-    DT::datatable(CL_sq5, filter = 'top')   
+    DT::datatable(CL_sq5, filter = 'top', rownames = FALSE)   
 
     cat("\n")
     cat("\n")
@@ -166,7 +166,7 @@ for (i in 1:nrow(CL_sq5)) {
   CL_DF_wrong_areas <- bind_rows(CL_DF_wrong_areas, filtered_data)
 }
 
-DT::datatable(CL_DF_wrong_areas, filter = 'top')
+DT::datatable(CL_DF_wrong_areas, filter = 'top', rownames = FALSE)
 
 ```
 

@@ -318,7 +318,7 @@ CLvl <- CL %>%
     group_by(CLyear, CLvesLenCat) %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
             CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-datatable(CLvl, caption = "Total weight by vessel length category by year")
+datatable(CLvl, caption = "Total weight by vessel length category by year", rownames = FALSE)
 ```
 
 

@@ -52,7 +52,6 @@ library(htmltools)
 ```{r}
 # Functions 
 source("../utils/utils.R")
-
 ```
 
 ```{r}
@@ -146,7 +145,7 @@ This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its prim
 
 # Summary 
 
-The following tables show summary values between the years. If the difference between the years exceeds 30% they are highlighted <span style="color:red">red</span>. The most recent year is used for the comparison. 
+The following tables show summary values between the years. <span style="color:red">If the difference between the years when compared to the most recent year exceeds 30% they are highlighted red. </span> 
 
 ```{r}
 # Number of records 
@@ -174,7 +173,6 @@ tabN2 <- tabN1 %>%
 
 kbl(tabN2, escape = F, caption = "Number of records in the CE and CL tables by year", align = rep("c", ncol(tabN2))) %>%
   kable_styling(bootstrap_options = "striped" )
-cat("\n")
 
 ```
 
