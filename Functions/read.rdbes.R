@@ -39,9 +39,6 @@ read.rdbes <- function(file){
   # CE month and area to lower case  
  names(CE) <- c("CEid", "CErecType", "CEdTypSciEff", "CEdSouSciEff", "CEsampScheme", "CEvesFlagCou", "CEyear", "CEquar", "CEmonth", "CEarea", "CEstatRect", "CEsoucStatRect", "CEfishManUnit", "CEgsaSubarea", "CEjurisdArea", "CEfishAreaCat", "CEfreshWatNam", "CEeconZone", "CLeconZoneIndi", "CEnatFishAct", "CEmetier6", "CEIBmitiDev", "CEloc", "CEvesLenCat", "CEfishTech", "CEmesSizRan", "CEsupReg", "CEgeoInd", "CEspeConTech", "CEdeepSeaReg", "CEoffVesHoursAtSea", "CEnumFracTrips", "CEnumDomTrip", "CEoffDaySea", "CESciDaySea", "CEoffFishDay", "CEsciFishDay", "CEoffNumHaulSet", "CEsciNumHaulSet", "CEoffVesFishHour", "CEsciVesFishHour", "CEoffSoakMeterHour", "CEsciSoakMeterHour", "CEoffkWDaySea", "CEscikWDaySea", "CEoffkWFishDay", "CEscikWFishDay", "CEoffkWFishHour", "CEscikWFishHour", "CEgTDaySea", "CEgTFishDay", "CEgTFishHour", "CEnumUniqVes", "CEgearDim", "CEnumFAD", "CEnumSupVes", "CEfishDaysErrMeaValTyp", "CEfishDaysErrMeaValFirst", "CEfishDaysErrMeaValSecond", "CEscientificFishingDaysQualBias", "CEconfiFlag", "CEencrypVesIds")
   
-  # ll <- filter(mapColNamesFieldR, Table.Prefix %in% "CE")
-  # 
-  # cat(paste0('c("', paste(unique(ll$R.Name), collapse = '", "'), '")'))
   
   # Character 
   CL$CLyear <- as.character(CL$CLyear)

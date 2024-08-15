@@ -53,10 +53,10 @@ library(htmltools)
 # Functions 
 # TODO add catHeader to script and load them all at once 
 # source("../Functions/read.rdbes.R")
-source("../Functions/rdbes.fc.R")
-source("../Functions/read.prelC.R")
-source("../Functions/read.fleet.R")
-source("../Functions/read.rdbes.R")
+source("../functions/rdbes.fc.R")
+source("../functions/read.prelC.R")
+source("../functions/read.fleet.R")
+source("../functions/read.rdbes.R")
 catHeader <- function(text = "", level = 3) {
     cat(paste0("\n\n", 
                paste(rep("#", level), collapse = ""), 

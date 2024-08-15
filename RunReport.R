@@ -8,7 +8,7 @@
 
 
 
-rmarkdown::render("./RmdCLCE/RDBESNationalQualityReport.Rmd", 
+rmarkdown::render("./rmd/RDBESNationalQualityReport.Rmd", 
                   
                   params = list(
                     
