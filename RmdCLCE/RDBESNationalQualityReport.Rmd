@@ -27,9 +27,9 @@ list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
-if(!"RDBEScore" %in% installed.packages()[,"Package"]){
-  remotes::install_github("ices-tools-dev/RDBEScore", build_vignettes = TRUE)
-}
+# if(!"RDBEScore" %in% installed.packages()[,"Package"]){
+#   remotes::install_github("ices-tools-dev/RDBEScore", build_vignettes = TRUE)
+# }
 
 # Loads packages 
 library(icesVocab)
@@ -43,7 +43,7 @@ library(knitr)
 library(mapplots)
 library(kableExtra)
 library(ggpubr)
-library(RDBEScore)
+# library(RDBEScore)
 library(htmltools)
 
 ```
@@ -56,6 +56,7 @@ library(htmltools)
 source("../Functions/rdbes.fc.R")
 source("../Functions/read.prelC.R")
 source("../Functions/read.fleet.R")
+source("../Functions/read.rdbes.R")
 catHeader <- function(text = "", level = 3) {
     cat(paste0("\n\n", 
                paste(rep("#", level), collapse = ""), 
@@ -84,18 +85,19 @@ ICESrect <- read.csv(url, header = TRUE)
 
 ```{r}
 # Read RDBES CL, CE files 
-df <- createRDBESDataObject(input = params$RDBESfile) 
+# Needs to be updated
+# df <- createRDBESDataObject(input = params$RDBESfile) 
 # For now use this 
-# df <- read.rdbes(params$RDBESfile)
-CL <- as.data.frame(df[["CL"]])
-CE <- as.data.frame(df[["CE"]])
+df <- read.rdbes(params$RDBESfile)
+CL <- as.data.frame(df[1])
+CE <- as.data.frame(df[2])
 
-# Change class of some fields for plotting 
-CL <- rdbes.fc(CL)
-# Quick fix of CE col names - inconsistency between CE-CL lowercase and upper case for some fields 
-names(CE)[names(CE) == 'CEMonth'] <- 'CEmonth'
-names(CE)[names(CE) == 'CEArea'] <- 'CEarea'
-CE <- rdbes.fc(CE)
+# # Change class of some fields for plotting 
+# CL <- rdbes.fc(CL)
+# # Quick fix of CE col names - inconsistency between CE-CL lowercase and upper case for some fields 
+# names(CE)[names(CE) == 'CEMonth'] <- 'CEmonth'
+# names(CE)[names(CE) == 'CEArea'] <- 'CEarea'
+# CE <- rdbes.fc(CE)
 
 
 ## Get metier lvl 4 
@@ -323,8 +325,6 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```{r, child = '06_CLCE_compare.Rmd'}
 
 ```
-
-
 
 
 ```{r, child = '07_Spatial_checks.Rmd'}

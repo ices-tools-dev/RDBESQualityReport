@@ -32,6 +32,17 @@ read.rdbes <- function(file){
                      header=T,  sep=",", quote = "")
   }
   
+  # R names 
+  
+  names(CL) <- c("CLid", "CLrecType", "CLdTypSciWeig", "CLdSouSciWeig", "CLsampScheme", "CLdSouLanVal", "CLlanCou", "CLvesFlagCou", "CLyear", "CLquar", "CLmonth", "CLarea", "CLstatRect", "CLdSoucstatRect", "CLfishManUnit", "CLgsaSubarea", "CLjurisdArea", "CLfishAreaCat", "CLfreshWatNam", "CLeconZone", "CLeconZoneIndi", "CLspecCode", "CLspecFAO", "CLlandCat", "CLcatchCat", "CLregDisCat", "CLsizeCatScale", "CLsizeCat", "CLnatFishAct", "CLmetier6", "CLIBmitiDev", "CLloc", "CLvesLenCat", "CLfishTech", "CLmesSizRan", "CLsupReg", "CLgeoInd", "CLspeConTech", "CLdeepSeaReg", "CLFDIconCod", "CLoffWeight", "CLsciWeight", "CLexpDiff", "CLtotOffLanVal", "CLtotNumFish", "CLnumUniqVes", "CLsciWeightErrMeaValTyp", "CLsciWeightErrMeaValFirst", "CLsciWeightErrMeaValSecond", "CLvalErrMeaValTyp", "CLvalErrMeaValFirst", "CLvalErrMeaValSecond", "CLnumFishInCatchErrMeaValTyp", "CLnumFishInCatchErrMeaValFirst", "CLnumFishInCatchErrMeaValSecond", "CLcom", "CLsciWeightQualBias", "CLconfiFlag", "CLencrypVesIds")
+
+  # CE month and area to lower case  
+ names(CE) <- c("CEid", "CErecType", "CEdTypSciEff", "CEdSouSciEff", "CEsampScheme", "CEvesFlagCou", "CEyear", "CEquar", "CEmonth", "CEarea", "CEstatRect", "CEsoucStatRect", "CEfishManUnit", "CEgsaSubarea", "CEjurisdArea", "CEfishAreaCat", "CEfreshWatNam", "CEeconZone", "CLeconZoneIndi", "CEnatFishAct", "CEmetier6", "CEIBmitiDev", "CEloc", "CEvesLenCat", "CEfishTech", "CEmesSizRan", "CEsupReg", "CEgeoInd", "CEspeConTech", "CEdeepSeaReg", "CEoffVesHoursAtSea", "CEnumFracTrips", "CEnumDomTrip", "CEoffDaySea", "CESciDaySea", "CEoffFishDay", "CEsciFishDay", "CEoffNumHaulSet", "CEsciNumHaulSet", "CEoffVesFishHour", "CEsciVesFishHour", "CEoffSoakMeterHour", "CEsciSoakMeterHour", "CEoffkWDaySea", "CEscikWDaySea", "CEoffkWFishDay", "CEscikWFishDay", "CEoffkWFishHour", "CEscikWFishHour", "CEgTDaySea", "CEgTFishDay", "CEgTFishHour", "CEnumUniqVes", "CEgearDim", "CEnumFAD", "CEnumSupVes", "CEfishDaysErrMeaValTyp", "CEfishDaysErrMeaValFirst", "CEfishDaysErrMeaValSecond", "CEscientificFishingDaysQualBias", "CEconfiFlag", "CEencrypVesIds")
+  
+  # ll <- filter(mapColNamesFieldR, Table.Prefix %in% "CE")
+  # 
+  # cat(paste0('c("', paste(unique(ll$R.Name), collapse = '", "'), '")'))
+  
   # Character 
   CL$CLyear <- as.character(CL$CLyear)
   CE$CEyear <- as.character(CE$CEyear)
@@ -40,11 +51,11 @@ read.rdbes <- function(file){
   CL$CLmonth <- factor(CL$CLmonth, levels = as.character(c(1:12)))
   CE$CEmonth <- factor(CE$CEmonth, levels = as.character(c(1:12)))
   # Quarter 
-  CL$CLquarter <- factor(CL$CLquarter, levels = as.character(c(1:4)))
-  CE$CEquarter <- factor(CE$CEquarter, levels = as.character(c(1:4)))
+  CL$CLquar <- factor(CL$CLquar, levels = as.character(c(1:4)))
+  CE$CEquar <- factor(CE$CEquar, levels = as.character(c(1:4)))
   # Vessel length category 
-  CL$CLvesselLengthCategory <- factor(CL$CLvesselLengthCategory, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
-  CE$CEvesselLengthCategory <- factor(CE$CEvesselLengthCategory, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
+  CL$CLvesLenCat <- factor(CL$CLvesLenCat, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
+  CE$CEvesLenCat<- factor(CE$CEvesLenCat, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
   
   
   return(list(CL,CE))

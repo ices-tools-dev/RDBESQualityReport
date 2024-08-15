@@ -6,7 +6,7 @@
 ```{r}
 CEtr <- CE %>% 
   group_by(CEyear) %>%
-  summarise(CEnumberOfFractionalTrips = sum(CEnumberOfFractionalTrips, na.rm = TRUE),
+  summarise(CEnumFracTrips = sum(CEnumFracTrips, na.rm = TRUE),
             CEnumDomTrip = sum(CEnumDomTrip, na.rm = TRUE))
 
 CEtr1 <- gather(CEtr, NumberofTripsSource, NumberofTrips, -CEyear)
@@ -27,7 +27,7 @@ CEtr %>%
 
 
 ```{r}
-ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumDomTrip)) +
+ggplot(CE, aes(CEnumFracTrips, CEnumDomTrip)) +
   geom_point() +
   facet_grid(.~CEyear)   +
   theme_bw() +
@@ -39,9 +39,9 @@ ggplot(CE, aes(CEnumberOfFractionalTrips, CEnumDomTrip)) +
 ```{r}
 CEg <- CE %>%
   group_by(CEmetier4, CEyear) %>%
-  summarise(CEnumberOfFractionalTrips = sum(CEnumberOfFractionalTrips),
+  summarise(CEnumFracTrips = sum(CEnumFracTrips),
             CEnumDomTrip = sum(CEnumDomTrip)) %>%
-  select(CEyear, CEmetier4, CEnumberOfFractionalTrips, CEnumDomTrip)
+  select(CEyear, CEmetier4, CEnumFracTrips, CEnumDomTrip)
 
 datatable(CEg, caption = "Number of dominant and fractional trips by gear and year", rownames= FALSE)
 

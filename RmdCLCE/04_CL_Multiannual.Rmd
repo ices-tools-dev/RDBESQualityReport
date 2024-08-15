@@ -523,10 +523,10 @@ ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLweightSource)) 
 
 ```{r}
 CLlan <- filter(CL, CLcatchCat %in% "Lan")
-CLlan$CLlandingsValue <- as.numeric(CLlan$CLlandingsValue)
+CLlan$CLtotOffLanVal <- as.numeric(CLlan$CLtotOffLanVal)
 top20_CLSpecies <- CLlan %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLlandingsValue)) %>%
+  summarise(lvTot=sum(CLtotOffLanVal)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_CLSpecies$Top20CLSpecies <- "X"
@@ -535,19 +535,19 @@ CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
 
 CLvalS <- CL1 %>%
   group_by(topCLSpecies, CLyear) %>%
-  summarise(CLlandingsValue = sum(CLlandingsValue, na.rm = TRUE)) 
+  summarise(CLtotOffLanVal = sum(CLtotOffLanVal, na.rm = TRUE)) 
 
 CLLoc <- CLvalS %>%
   group_by(topCLSpecies) %>%
-  mutate(TotV = sum(CLlandingsValue))
+  mutate(TotV = sum(CLtotOffLanVal))
 
 
-ggplot(CLLoc, aes(reorder(topCLSpecies, -TotV), CLlandingsValue, fill = CLyear)) +
+ggplot(CLLoc, aes(reorder(topCLSpecies, -TotV), CLtotOffLanVal, fill = CLyear)) +
   geom_bar(position="stack", stat="identity") +
   theme_bw() +
   theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
   xlab("topCLSpecies") +
-  ylab("CLlandingsValue")
+  ylab("CLtotOffLanVal")
 ```
 
 ###  Value vs weight{.tabset}
@@ -557,7 +557,7 @@ CL2 <- filter(CL1, topCLSpecies != "OTH")
 
 val <- list()
 for(i in sort(unique(CL2$topCLSpecies))){
-  val[[i]] <- ggplot(filter(CL2, topCLSpecies %in% i), aes(CLlandingsValue, CLsciWeight, color = CLyear)) +
+  val[[i]] <- ggplot(filter(CL2, topCLSpecies %in% i), aes(CLtotOffLanVal, CLsciWeight, color = CLyear)) +
     geom_point() +
     theme_bw()+
   theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))

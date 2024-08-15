@@ -44,7 +44,7 @@ CE_DF$topMetiers <- ifelse(is.na(CE_DF$Top20metiers),"OTH",CE_DF$CEmetier6)
 # Find top 20 metiers according to the landed value
 top20_metiers_lv <- CL_DF %>%
   group_by(CLmetier6) %>%
-  summarise(lvTot=sum(as.numeric(CLlandingsValue))) %>%
+  summarise(lvTot=sum(as.numeric(CLtotOffLanVal))) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_metiers_lv$Top20metiers <- "X"
