@@ -23,7 +23,7 @@ options(scipen=999, viewer=NULL)
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr")
+list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -51,7 +51,7 @@ library(htmltools)
 
 ```{r}
 # Functions 
-source("../utils/utils.R")
+source(paste0(dirname(rstudioapi::getActiveDocumentContext()$path), "/utils/utils.R"))
 ```
 
 ```{r}

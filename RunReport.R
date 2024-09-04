@@ -27,7 +27,7 @@ rmarkdown::render("./rmd/RDBESNationalQualityReport.Rmd",
                   ),
                   
                   # The path to where the report is saved 
-                  output_dir = "../RDBESQualityReport/ReportOutput")
+                  output_dir = "../ReportOutput")
 
 
 
