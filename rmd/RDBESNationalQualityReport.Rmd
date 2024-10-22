@@ -133,13 +133,6 @@ CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 0)
 ```
 
 
-```{r}
-# For testing
-CL$CLcatchCat[1:50] <- "BMS"
-CL$CLcatchCat[51:100] <- "RegDis"
-# CL$CLregDisCategory <- "Deminimis"
-
-```
 
 This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its primary purpose is to serve as a resource for data submitters, helping them identify and correct potential errors before the submission deadline. By utilizing this script, data submitters can improve the accuracy and completeness of their data, thereby improving the overall quality and reliability of the submitted information. The output shown herein is designed to assist users in reviewing their data, facilitating a smoother and more efficient submission process. 
 

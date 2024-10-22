@@ -8,26 +8,26 @@
 
 
 
-rmarkdown::render("./rmd/RDBESNationalQualityReport.Rmd", 
+rmarkdown::render("path the the Rmd document folder/rmd/RDBESNationalQualityReport.Rmd", 
                   
                   params = list(
                     
-                    RDBESfile = c("../Data/HCE_2024_04_24_075857.zip", "../Data/HCL_2024_04_24_075836.zip"),
+                    RDBESfile = c("path to the commercial effort", "path to the commercial landings"),
                     
-                    eurostat = FALSE,
+                    eurostat = TRUE,
                     
-                    prelcatchstat = FALSE,
+                    prelcatchstat = TRUE,
                     
-                    prelcatchFile = "../Data/Rec12_05sgy0mmzfee0byudat1u2pw133584160602355104.zip", 
+                    prelcatchFile = "path to the ICES preliminary catch statistics", 
                     
                     fleetRegister = FALSE,   
                     
-                    fleetRegisterFile = "../Data/vesselRegistryListResults.zip"
+                    fleetRegisterFile = ""
                     
                   ),
                   
                   # The path to where the report is saved 
-                  output_dir = "../ReportOutput")
+                  output_dir = "path to the report output folder/ReportOutput")
 
 
 
