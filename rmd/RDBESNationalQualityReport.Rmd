@@ -135,9 +135,9 @@ CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 0)
 
 ```{r}
 # For testing
-CL$CLcatchCat[1:50] <- "BMS"
-CL$CLcatchCat[51:100] <- "RegDis"
-# CL$CLregDisCategory <- "Deminimis"
+# CL$CLcatchCat[1:50] <- "BMS"
+# CL$CLcatchCat[51:100] <- "RegDis"
+# # CL$CLregDisCategory <- "Deminimis"
 
 ```
 
