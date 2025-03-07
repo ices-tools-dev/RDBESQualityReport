@@ -38,7 +38,7 @@ CLw1 %>%
 CLrcg <- left_join(CL, Area, by = c("CLarea" = "AreaCode"))
 
 CLws <- CLrcg %>%
-  group_by(CLyear, CLdTypSciWeig, CLdSouSciWeig,  CLarea, Code) %>%
+  group_by(CLyear, CLdBasSciWeig, CLdSouSciWeig,CLarea, Code) %>%
   summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
 
 
@@ -47,7 +47,7 @@ tab <- list()
 for(i in unique(CLws$Code)){
   rcg[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLdTypSciWeig~CLdSouSciWeig) +
+  facet_grid(CLdBasSciWeig~CLdSouSciWeig) +
   theme_bw() +
   theme(text = element_text(size = 20),
         axis.text.x = element_text(angle = 90, hjust = 1)) 
@@ -526,7 +526,7 @@ CLlan <- filter(CL, CLcatchCat %in% "Lan")
 CLlan$CLtotOffLanVal <- as.numeric(CLlan$CLtotOffLanVal)
 top20_CLSpecies <- CLlan %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLtotOffLanVal)) %>%
+  summarise(lvTot=sum(CLtotOffLanVal, na.rm=TRUE)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_CLSpecies$Top20CLSpecies <- "X"
@@ -539,7 +539,7 @@ CLvalS <- CL1 %>%
 
 CLLoc <- CLvalS %>%
   group_by(topCLSpecies) %>%
-  mutate(TotV = sum(CLtotOffLanVal))
+  mutate(TotV = sum(CLtotOffLanVal, na.rm = TRUE))
 
 
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotV), CLtotOffLanVal, fill = CLyear)) +
