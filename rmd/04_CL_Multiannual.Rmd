@@ -207,7 +207,7 @@ cat("#### Landings \n\n")
 CLlan <- filter(CL, CLcatchCat %in% "Lan")
 top20_CLSpecies <- CLlan %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight)) %>%
+  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_CLSpecies$Top20CLSpecies <- "X"
@@ -216,13 +216,13 @@ CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
 
 CLweightS <- CL1 %>%
   group_by(topCLSpecies, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
+  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
   gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear))
 
 CLLoc <- CLweightS %>%
   group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight))
+  mutate(TotW = sum(CLweight, na.rm = TRUE))
 
 
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
@@ -245,7 +245,7 @@ cat("#### BMS \n\n")
 CLlan <- filter(CL, CLcatchCat %in% "BMS")
 top20_CLSpecies <- CLlan %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight)) %>%
+  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_CLSpecies$Top20CLSpecies <- "X"
@@ -254,14 +254,14 @@ CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
 
 CLweightS <- CL1 %>%
   group_by(topCLSpecies, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
+  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
   gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear))
 
 
 CLLoc <- CLweightS %>%
   group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight))
+  mutate(TotW = sum(CLweight, na.rm = TRUE))
 
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLweightSource)) +
   geom_bar(position="stack", stat="identity") +
@@ -282,7 +282,7 @@ cat("#### Logbook registered discards \n\n")
 CLlan <- filter(CL, CLcatchCat %in% "RegDis")
 top20_CLSpecies <- CLlan %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight)) %>%
+  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_CLSpecies$Top20CLSpecies <- "X"
@@ -291,13 +291,13 @@ CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
 
 CLweightS <- CL1 %>%
   group_by(topCLSpecies, CLyear, CLregDisCat) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
+  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
   gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear, CLregDisCat))
 
 CLLoc <- CLweightS %>%
   group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight))
+  mutate(TotW = sum(CLweight, na.rm = TRUE))
 
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLweightSource)) +
   geom_bar(position="stack", stat="identity") +
@@ -382,7 +382,7 @@ ggplot(CLw, aes(CLvesLenCat, Weight, fill = CLyear)) +
 ```{r}
 CLg <- CL %>%
   group_by(CLmetier4, CLyear) %>%
-  summarise(CLsciWeight = sum(CLsciWeight))
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
 
 Clt <- CLg%>%
   spread(CLmetier4, CLsciWeight)
