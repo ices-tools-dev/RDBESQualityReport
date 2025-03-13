@@ -16,7 +16,7 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, fig.height = 10, fig.width = 14)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, fig.height = 10, fig.width = 14)
 options(scipen=999, viewer=NULL)
 ```
 
@@ -78,6 +78,8 @@ ICESrect <- read.csv(url, header = TRUE)
 # df <- createRDBESDataObject(input = params$RDBESfile) 
 # For now use this 
 df <- read.rdbes(params$RDBESfile)
+
+
 CL <- as.data.frame(df[1])
 CE <- as.data.frame(df[2])
 

@@ -24,7 +24,7 @@ You can clone the repository from the main branch to your local enviroment or yo
 In this script you have to define the local path to where the report Rmarkdown and data are stored in the respective fields. If you want the report to produce the comparison with the auxiliary data you need to set the field values of eurostat and prelcatchstat to TRUE.
 
 > [!IMPORTANT]\
-> No pre-processing is required for the data. The script works with the exported zip files.
+> No pre-processing is required for the data. The script works with the exported zip files. However, the zip files need to be of the same download format (either all Table with id's format, or all Upload format).
 
 ``` r
 

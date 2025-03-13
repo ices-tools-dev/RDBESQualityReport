@@ -11,11 +11,7 @@
 
 read.rdbes <- function(file){
   
-# file <- c("./HCE_2024_04_24_075857.zip", "./HCL_2024_04_24_075836.zip")
 
-# Check the input file extension. Need to be the same and zip for all files?
-
-  # if(all(str_detect(file, "zip")) | all(str_detect(file, "csv"))){
     
 if(all(str_detect(file, "zip"))){ 
   
@@ -23,10 +19,16 @@ if(all(str_detect(file, "zip"))){
     CEfiles <- unique(file[str_detect(file, "HCE")])
     
     # Check which download format it is
-    CLfv <- substring(readLines(unz(CLfiles, "CommercialLanding.csv"), n = 1), 1, 4)
-    CEfv <- substring(readLines(unz(CEfiles, "CommercialEffort.csv"), n = 1), 1, 4)
+    filenamCL <- unzip(CLfiles, list = TRUE)$Name
+    filenamCE <- unzip(CEfiles, list = TRUE)$Name
     
-    if(unique(CLfv) == "CLid" & unique(CEfv) == "CEid"){ # if table with ids - always zip
+    # Find the file that matches any of the expected prefixes and ends with .csv
+    csvnamCL <- sub("\\.csv$", "", filenamCL[grepl("^(CommercialLanding|CommercialEffort|HCE|HCL).*\\.csv$", filenamCL)])
+    csvnamCE <- sub("\\.csv$", "", filenamCE[grepl("^(CommercialLanding|CommercialEffort|HCE|HCL).*\\.csv$", filenamCE)])
+    
+
+    
+    if(unique(csvnamCL) == "CommercialLanding" & unique(csvnamCE) == "CommercialEffort"){ # if table with ids - always zip
 
       if(length(CLfiles) > 1){
         listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"),
@@ -48,31 +50,31 @@ if(all(str_detect(file, "zip"))){
                        header=T,  sep=",", quote = "")
       }
       
-    }else{ # upload format (can be downloaded or read as csv? For now does not work with csv - user should validate the data first, too strict?
+    }else if(unique(csvnamCL) == "HCL" & unique(csvnamCE) == "HCE"){ # upload format (can be downloaded or read as csv? For now does not work with csv - user should validate the data first, too strict?
       
       if(length(CLfiles) > 1){
-        listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"),
+        listCL <- lapply(CLfiles, function(x){read.table(unz(x, "HCL.csv"),
                                                          header=F,  sep=",", quote = "")})
         CL <- do.call(rbind, listCL)
         # Create CLid 
         CL <- cbind(CLid = 1:nrow(CL), CL)
 
       }else{
-        CL <- read.table(unz(CLfiles, "CommercialLanding.csv"),
+        CL <- read.table(unz(CLfiles, "HCL.csv"),
                          header=F,  sep=",", quote = "")
         CL <- cbind(CLid = 1:nrow(CL), CL)
       }
       
       if(length(CEfiles) > 1){
         
-        listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"),
+        listCE <- lapply(CEfiles, function(x){read.table(unz(x, "HCE.csv"),
                                                          header=F,  sep=",", quote = "")})
         CE <- do.call(rbind, listCE)
         CE <- cbind(CEid = 1:nrow(CE), CE)
         
       }else{
         
-        CE <- read.table(unz(CEfiles, "CommercialEffort.csv"),
+        CE <- read.table(unz(CEfiles, "HCE.csv"),
                          header=F,  sep=",", quote = "")
         
         CE <- cbind(CEid = 1:nrow(CE), CE)
@@ -83,7 +85,7 @@ if(all(str_detect(file, "zip"))){
     
   }else{
     
-    stop("The CL and CE tables need to be the same format.")
+    stop("Error: The CL and CE tables need to be the same format.")
   }
     
 
