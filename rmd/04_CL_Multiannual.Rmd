@@ -35,11 +35,12 @@ CLw1 %>%
 
 ```{r}
 # Sci weight by data type & source 
-CLrcg <- left_join(CL, Area, by = c("CLarea" = "AreaCode"))
+CLrcg <- left_join(CL, Area, by = c("CLarea" = "AreaCode")) %>%
+  filter(!is.na(Code))
 
 CLws <- CLrcg %>%
   group_by(CLyear, CLdBasSciWeig, CLdSouSciWeig,CLarea, Code) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) 
 
 
 rcg <- list()
@@ -88,26 +89,29 @@ CLws <- CLrcg %>%
   group_by(CLyear, CLarea, Code, CLquar, CLcatchCat) %>%
   summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))%>%
   filter(CLcatchCat %in% "Lan")
-rcgq <- list()
+rcgq1 <- list()
 for(i in unique(CLws$Code)){
-rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
+rcgq1[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_grid(CLquar~.) +
   theme_bw() +
   theme(text = element_text(size = 20),
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   ylab("CLsciWeight (t)")
+ tab[[i]] <- filter(CLws, Code %in% i) 
+
 }
 
 ```
 
 ```{r results = "asis", fig.dim= c(12, 8)}
 
-for(i in unique(names(rcgq))){
+for(i in unique(names(rcgq1))){
     # The tabset level here has to be lower than the
     # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(rcgq[i]), 6)
-    lapply(rcgq[i], print)
+    catHeader(names(rcgq1[i]), 6)
+    lapply(rcgq1[i], print)
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
 }
 ```
 
@@ -128,6 +132,7 @@ rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = C
   theme(text = element_text(size = 20),
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   ylab("CLsciWeight (t)")
+ tab[[i]] <- filter(CLws, Code %in% i) 
 } 
 ```
 
@@ -138,6 +143,7 @@ for(i in unique(names(rcgq))){
     # parent level (ie, parent is 2, so here you have to use 3)
     catHeader(names(rcgq[i]), 6)
     lapply(rcgq[i], print)
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
 }
 ```
 
@@ -159,6 +165,7 @@ rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = C
   theme(text = element_text(size = 20),
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   ylab("CLsciWeight (t)")
+tab[[i]] <- filter(CLws, Code %in% i) 
 }
 ```
 
@@ -170,6 +177,7 @@ for(i in unique(names(rcgq))){
     # parent level (ie, parent is 2, so here you have to use 3)
     catHeader(names(rcgq[i]), 6)
     lapply(rcgq[i], print)
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
 }
 ```
 
@@ -177,7 +185,7 @@ for(i in unique(names(rcgq))){
 
 ### By landing vs vessel flag country 
 
-Need to add riverplot here    
+ 
 ```{r}
 # Landing vs vessel flag country
 CLvs <- CL %>%
@@ -185,13 +193,16 @@ CLvs <- CL %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
             CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
 CLvs<- gather(CLvs, WeightSource, Weight, -c(CLyear, CLlanCou, CLvesFlagCou))
-CLvs <- gather(CLvs, CountrySource, Country, -c(CLyear, WeightSource, Weight))
-ggplot(CLvs, aes(CLyear, Weight, fill = WeightSource)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(Country~CountrySource) +
+ggplot(data = CLvs,
+       aes(axis1 = CLvesFlagCou, axis2 = CLlanCou, y = Weight)) +
+  scale_x_discrete(limits = c("Vessel Flag Country", "Landing Country")) +
+  ylab("Weight (t)") +
+  geom_alluvium(aes(fill = WeightSource)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
   theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1))
+  theme(text = element_text(size = 20))+
+  facet_wrap(.~CLyear)
 
 ```
 

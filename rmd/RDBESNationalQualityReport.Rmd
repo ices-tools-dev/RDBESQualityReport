@@ -23,7 +23,7 @@ options(scipen=999, viewer=NULL)
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi")
+list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -45,6 +45,7 @@ library(kableExtra)
 library(ggpubr)
 # library(RDBEScore)
 library(htmltools)
+library(ggalluvial)
 
 ```
 
@@ -137,9 +138,9 @@ CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 0)
 
 ```{r}
 # For testing
-# CL$CLcatchCat[1:50] <- "BMS"
-# CL$CLcatchCat[51:100] <- "RegDis"
-# # CL$CLregDisCategory <- "Deminimis"
+CL$CLcatchCat[1:50] <- "BMS"
+CL$CLcatchCat[51:100] <- "RegDis"
+# CL$CLregDisCategory <- "Deminimis"
 
 ```
 
