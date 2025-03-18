@@ -44,13 +44,28 @@ CE_DF$topMetiers <- ifelse(is.na(CE_DF$Top20metiers),"OTH",CE_DF$CEmetier6)
 # Find top 20 metiers according to the landed value
 top20_metiers_lv <- CL_DF %>%
   group_by(CLmetier6) %>%
-  summarise(lvTot=sum(as.numeric(CLtotOffLanVal))) %>%
+  summarise(lvTot=sum(as.numeric(CLtotOffLanVal), na.rm = TRUE)) %>%
   arrange(desc(lvTot)) %>%
   top_n(20)
 top20_metiers_lv$Top20metiers <- "X"
 CL_DF <- left_join(CL_DF,top20_metiers_lv,by="CLmetier6")
 CL_DF$topMetiers <- ifelse(is.na(CL_DF$Top20metiers),"OTH",CL_DF$CLmetier6)
 
+# For the ices rectangles centroid
+# Need to assign the same topMetiers between CL & CE 
+# CL weight as variable to determine top 20metiers
+
+top20_metiers_w <- CL_DF %>%
+  group_by(CLmetier6) %>%
+  summarise(wTot=sum(CLoffWeight, na.rm = TRUE)) %>%
+  arrange(desc(wTot)) %>%
+  top_n(20)
+top20_metiers_w$Top20metiersW <- "X"
+CL_DF <- left_join(CL_DF,top20_metiers_w,by="CLmetier6")
+CL_DF$topMetiersW <- ifelse(is.na(CL_DF$Top20metiersW),"OTH",CL_DF$CLmetier6)
+
+CE_DF <- left_join(CE_DF,top20_metiers_w,by=c("CEmetier6" = "CLmetier6"))
+CE_DF$topMetiersW <- ifelse(is.na(CE_DF$Top20metiersW),"OTH",CE_DF$CEmetier6)
 ```
 
 ## ICES rectangles and FAO Areas
@@ -191,13 +206,13 @@ for(country in sort(unique_countries)){
   # Filter CE and CL data for the current country
   CE_subset_data <- CE_DF %>%
     filter(CEvesFlagCou == country, CEstatRect != '-9') %>%
-    distinct(CEstatRect, CEvesFlagCou, topMetiers) %>%
+    distinct(CEstatRect, CEvesFlagCou, topMetiersW) %>%
     mutate(lon = ices.rect(CEstatRect)$lon,
            lat = ices.rect(CEstatRect)$lat)
   
   CL_subset_data <- CL_DF %>%
     filter(CLvesFlagCou == country, CLstatRect != '-9') %>%
-    distinct(CLstatRect, CLvesFlagCou, topMetiers) %>%
+    distinct(CLstatRect, CLvesFlagCou, topMetiersW) %>%
     mutate(lon = ices.rect(CLstatRect)$lon,
            lat = ices.rect(CLstatRect)$lat)
   
@@ -211,14 +226,14 @@ for(country in sort(unique_countries)){
   CL_without_CE[[country]] <- list()
   
   # Iterate over unique values of topMetiers for the current country
-  for(topMetier in sort(unique(CE_subset_data$topMetiers))){
+  for(topMetier in sort(unique(CE_subset_data$topMetiersW))){
     
     # Subset CE and CL data for the current topMetier
     CE_subset_data_topMetier <- CE_subset_data %>%
-      filter(topMetiers == topMetier)
+      filter(topMetiersW == topMetier)
     
     CL_subset_data_topMetier <- CL_subset_data %>%
-      filter(topMetiers == topMetier)
+      filter(topMetiersW == topMetier)
     
     # Filter CL data to only contain cases where CLstatRect are in the CL_only_rectangles
     CL_only_rectangles <- CL_subset_data_topMetier %>%
@@ -229,7 +244,7 @@ for(country in sort(unique_countries)){
     CL_without_CE[[country]][[topMetier]] <- CL_DF %>%
       filter(CLvesFlagCou == country,
              CLstatRect != '-9',
-             topMetiers == topMetier) %>% 
+             topMetiersW == topMetier) %>% 
       semi_join(CL_only_rectangles, by = c("CLstatRect"))%>%
       select(CLid, CLvesFlagCou, CLyear, CLmonth, CLstatRect, CLmetier6, CLvesLenCat, CLencrypVesIds)%>%
       arrange(CLstatRect)
@@ -297,10 +312,11 @@ for(country in unique_countries) {
     cat("The following table shows an overview of all CLid for which no CEid exists (landings without effort).\n\n")
     
     # Output table for the current gear and country using knitr's results='asis'
-    kable(CL_without_CE[[country]][[gear]], "html", caption = NULL) %>%
-      kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
-      as.character() %>%
-      cat()
+    print(htmltools::tagList(DT::datatable(CL_without_CE[[country]][[gear]], filter = 'top', rownames = FALSE)))
+  #   kable(CL_without_CE[[country]][[gear]], "html", caption = NULL) %>%
+  #     kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
+  #     as.character() %>%
+  #     cat()
   }
 }
 ```

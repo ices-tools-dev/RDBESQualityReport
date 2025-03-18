@@ -11,50 +11,108 @@
 
 read.rdbes <- function(file){
   
-  CLfiles <- unique(file[str_detect(file, "HCL")])
-  CEfiles <- unique(file[str_detect(file, "HCE")])
+
+    
+if(all(str_detect(file, "zip"))){ 
   
-  if(length(CLfiles) > 1){
-    listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"), 
-                                                     header=T,  sep=",", quote = "")})
-    CL <- do.call(rbind, listCL)
+    CLfiles <- unique(file[str_detect(file, "HCL")])
+    CEfiles <- unique(file[str_detect(file, "HCE")])
+    
+    # Check which download format it is
+    filenamCL <- unzip(CLfiles, list = TRUE)$Name
+    filenamCE <- unzip(CEfiles, list = TRUE)$Name
+    
+    # Find the file that matches any of the expected prefixes and ends with .csv
+    csvnamCL <- sub("\\.csv$", "", filenamCL[grepl("^(CommercialLanding|CommercialEffort|HCE|HCL).*\\.csv$", filenamCL)])
+    csvnamCE <- sub("\\.csv$", "", filenamCE[grepl("^(CommercialLanding|CommercialEffort|HCE|HCL).*\\.csv$", filenamCE)])
+    
+
+    
+    if(unique(csvnamCL) == "CommercialLanding" & unique(csvnamCE) == "CommercialEffort"){ # if table with ids - always zip
+
+      if(length(CLfiles) > 1){
+        listCL <- lapply(CLfiles, function(x){read.table(unz(x, "CommercialLanding.csv"),
+                                                         header=T,  sep=",", quote = "")})
+        CL <- do.call(rbind, listCL)
+
+      }else{
+        CL <- read.table(unz(CLfiles, "CommercialLanding.csv"),
+                         header=T,  sep=",", quote = "")
+
+      }
+
+      if(length(CEfiles) > 1){
+        listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"),
+                                                         header=T,  sep=",", quote = "")})
+        CE <- do.call(rbind, listCE)
+      }else{
+      CE <- read.table(unz(CEfiles, "CommercialEffort.csv"),
+                       header=T,  sep=",", quote = "")
+      }
+      
+    }else if(unique(csvnamCL) == "HCL" & unique(csvnamCE) == "HCE"){ # upload format (can be downloaded or read as csv? For now does not work with csv - user should validate the data first, too strict?
+      
+      if(length(CLfiles) > 1){
+        listCL <- lapply(CLfiles, function(x){read.table(unz(x, "HCL.csv"),
+                                                         header=F,  sep=",", quote = "")})
+        CL <- do.call(rbind, listCL)
+        # Create CLid 
+        CL <- cbind(CLid = 1:nrow(CL), CL)
+
+      }else{
+        CL <- read.table(unz(CLfiles, "HCL.csv"),
+                         header=F,  sep=",", quote = "")
+        CL <- cbind(CLid = 1:nrow(CL), CL)
+      }
+      
+      if(length(CEfiles) > 1){
+        
+        listCE <- lapply(CEfiles, function(x){read.table(unz(x, "HCE.csv"),
+                                                         header=F,  sep=",", quote = "")})
+        CE <- do.call(rbind, listCE)
+        CE <- cbind(CEid = 1:nrow(CE), CE)
+        
+      }else{
+        
+        CE <- read.table(unz(CEfiles, "HCE.csv"),
+                         header=F,  sep=",", quote = "")
+        
+        CE <- cbind(CEid = 1:nrow(CE), CE)
+
+      }
+      
+    }
+    
   }else{
-    CL <- read.table(unz(CLfiles, "CommercialLanding.csv"), 
-                     header=T,  sep=",", quote = "")
+    
+    stop("Error: The CL and CE tables need to be the same format.")
   }
+    
+
+
+  # R names
+
+  names(CL) <- c("CLid", "CLrecType","CLdBasSciWeig", "CLdSouSciWeig", "CLsampScheme", "CLdSouLanVal", "CLlanCou", "CLvesFlagCou", "CLyear", "CLquar", "CLmonth", "CLarea", "CLstatRect", "CLdatBasStatRect", "CLdSoucstatRect", "CLfishManUnit", "CLgsaSubarea", "CLjurisdArea", "CLfishAreaCat", "CLfreshWatNam", "CLeconZone", "CLeconZoneIndi", "CLspecCode", "CLspecFAO", "CLlandCat", "CLcatchCat", "CLregDisCat", "CLsizeCatScale", "CLsizeCat", "CLnatFishAct", "CLmetier6", "CLIBmitiDev", "CLloc", "CLvesLenCat", "CLfishTech", "CLmesSizRan", "CLsupReg", "CLgeoInd", "CLspeConTech", "CLdeepSeaReg", "CLFDIconCod", "CLoffWeight", "CLsciWeight", "CLexpDiff", "CLtotOffLanVal", "CLtotNumFish", "CLnumUniqVes", "CLsciWeightErrMeaValTyp", "CLsciWeightErrMeaValFirst", "CLsciWeightErrMeaValSecond", "CLvalErrMeaValTyp", "CLvalErrMeaValFirst", "CLvalErrMeaValSecond", "CLnumFishInCatchErrMeaValTyp", "CLnumFishInCatchErrMeaValFirst", "CLnumFishInCatchErrMeaValSecond", "CLcom", "CLsciWeightQualBias", "CLconfiFlag", "CLencrypVesIds")
   
-  if(length(CEfiles) > 1){
-    listCE <- lapply(CEfiles, function(x){read.table(unz(x, "CommercialEffort.csv"), 
-                                                     header=T,  sep=",", quote = "")})
-    CE <- do.call(rbind, listCE)
-  }else{
-    CE <- read.table(unz(CEfiles, "CommercialEffort.csv"), 
-                     header=T,  sep=",", quote = "")
-  }
-  
-  # R names 
-  
-  names(CL) <- c("CLid", "CLrecType", "CLdTypSciWeig", "CLdSouSciWeig", "CLsampScheme", "CLdSouLanVal", "CLlanCou", "CLvesFlagCou", "CLyear", "CLquar", "CLmonth", "CLarea", "CLstatRect", "CLdSoucstatRect", "CLfishManUnit", "CLgsaSubarea", "CLjurisdArea", "CLfishAreaCat", "CLfreshWatNam", "CLeconZone", "CLeconZoneIndi", "CLspecCode", "CLspecFAO", "CLlandCat", "CLcatchCat", "CLregDisCat", "CLsizeCatScale", "CLsizeCat", "CLnatFishAct", "CLmetier6", "CLIBmitiDev", "CLloc", "CLvesLenCat", "CLfishTech", "CLmesSizRan", "CLsupReg", "CLgeoInd", "CLspeConTech", "CLdeepSeaReg", "CLFDIconCod", "CLoffWeight", "CLsciWeight", "CLexpDiff", "CLtotOffLanVal", "CLtotNumFish", "CLnumUniqVes", "CLsciWeightErrMeaValTyp", "CLsciWeightErrMeaValFirst", "CLsciWeightErrMeaValSecond", "CLvalErrMeaValTyp", "CLvalErrMeaValFirst", "CLvalErrMeaValSecond", "CLnumFishInCatchErrMeaValTyp", "CLnumFishInCatchErrMeaValFirst", "CLnumFishInCatchErrMeaValSecond", "CLcom", "CLsciWeightQualBias", "CLconfiFlag", "CLencrypVesIds")
-  
-  # CE month and area to lower case  
-  names(CE) <- c("CEid", "CErecType", "CEdTypSciEff", "CEdSouSciEff", "CEsampScheme", "CEvesFlagCou", "CEyear", "CEquar", "CEmonth", "CEarea", "CEstatRect", "CEsoucStatRect", "CEfishManUnit", "CEgsaSubarea", "CEjurisdArea", "CEfishAreaCat", "CEfreshWatNam", "CEeconZone", "CLeconZoneIndi", "CEnatFishAct", "CEmetier6", "CEIBmitiDev", "CEloc", "CEvesLenCat", "CEfishTech", "CEmesSizRan", "CEsupReg", "CEgeoInd", "CEspeConTech", "CEdeepSeaReg", "CEoffVesHoursAtSea", "CEnumFracTrips", "CEnumDomTrip", "CEoffDaySea", "CESciDaySea", "CEoffFishDay", "CEsciFishDay", "CEoffNumHaulSet", "CEsciNumHaulSet", "CEoffVesFishHour", "CEsciVesFishHour", "CEoffSoakMeterHour", "CEsciSoakMeterHour", "CEoffkWDaySea", "CEscikWDaySea", "CEoffkWFishDay", "CEscikWFishDay", "CEoffkWFishHour", "CEscikWFishHour", "CEgTDaySea", "CEgTFishDay", "CEgTFishHour", "CEnumUniqVes", "CEgearDim", "CEnumFAD", "CEnumSupVes", "CEfishDaysErrMeaValTyp", "CEfishDaysErrMeaValFirst", "CEfishDaysErrMeaValSecond", "CEscientificFishingDaysQualBias", "CEconfiFlag", "CEencrypVesIds")
-  
-  
-  # Character 
+  # CE month and area to lower case
+  names(CE) <- c("CEid", "CErecType", "CEdBasSciEff", "CEdSouSciEff", "CEsampScheme", "CEvesFlagCou", "CEyear", "CEquar", "CEmonth", "CEarea", "CEstatRect","CEdatBasStatRect" ,"CEsoucStatRect", "CEfishManUnit", "CEgsaSubarea", "CEjurisdArea", "CEfishAreaCat", "CEfreshWatNam", "CEeconZone", "CLeconZoneIndi", "CEnatFishAct", "CEmetier6", "CEIBmitiDev", "CEloc", "CEvesLenCat", "CEfishTech", "CEmesSizRan", "CEsupReg", "CEgeoInd", "CEspeConTech", "CEdeepSeaReg", "CEoffVesHoursAtSea", "CEnumFracTrips", "CEnumDomTrip", "CEoffDaySea", "CESciDaySea", "CEoffFishDay", "CEsciFishDay", "CEoffNumHaulSet", "CEsciNumHaulSet", "CEoffVesFishHour", "CEsciVesFishHour", "CEoffSoakMeterHour", "CEsciSoakMeterHour", "CEoffkWDaySea", "CEscikWDaySea", "CEoffkWFishDay", "CEscikWFishDay", "CEoffkWFishHour", "CEscikWFishHour", "CEgTDaySea", "CEgTFishDay", "CEgTFishHour", "CEnumUniqVes", "CEgearDim", "CEnumFAD", "CEnumSupVes", "CEfishDaysErrMeaValTyp", "CEfishDaysErrMeaValFirst", "CEfishDaysErrMeaValSecond", "CEscientificFishingDaysQualBias", "CEconfiFlag", "CEencrypVesIds")
+
+
+  # Character
   CL$CLyear <- as.character(CL$CLyear)
   CE$CEyear <- as.character(CE$CEyear)
-  # Create factors of variables for plots 
-  # Month 
+  # Create factors of variables for plots
+  # Month
   CL$CLmonth <- factor(CL$CLmonth, levels = as.character(c(1:12)))
   CE$CEmonth <- factor(CE$CEmonth, levels = as.character(c(1:12)))
-  # Quarter 
+  # Quarter
   CL$CLquar <- factor(CL$CLquar, levels = as.character(c(1:4)))
   CE$CEquar <- factor(CE$CEquar, levels = as.character(c(1:4)))
-  # Vessel length category 
+  # Vessel length category
   CL$CLvesLenCat <- factor(CL$CLvesLenCat, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
   CE$CEvesLenCat<- factor(CE$CEvesLenCat, levels = c("VL0006", "VL0608", "VL0810", "VL1012", "VL1215", "VL1518", "VL1824", "VL2440", "VL40XX"))
-  
-  
+
+
   return(list(CL,CE))
   
 }
