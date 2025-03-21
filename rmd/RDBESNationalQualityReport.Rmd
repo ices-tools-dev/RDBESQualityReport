@@ -23,7 +23,7 @@ options(scipen=999, viewer=NULL)
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "ggplot", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
+list.of.packages <- c("icesVocab", "ggplot2", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
@@ -46,6 +46,7 @@ library(ggpubr)
 # library(RDBEScore)
 library(htmltools)
 library(ggalluvial)
+library(ggplot2)
 
 ```
 
