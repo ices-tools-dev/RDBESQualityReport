@@ -125,7 +125,8 @@ title: `r titleR`
 # Get species scientific name from aphiaID
 ScName <- getCodeList("SpecWorms") %>%
   select(Description, Key) %>%
-  rename(LatinName = Description)
+  rename(LatinName = Description) %>%
+  mutate(Key = as.numeric(Key))
 CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key")) 
 ```
 
