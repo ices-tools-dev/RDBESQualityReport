@@ -7,18 +7,22 @@ The following analysis allows to check if landings have corresponding effort. Th
 
 ```{r}
 CEkeyColumns <- c("CErecType","CEvesFlagCou","CEyear","CEquar","CEmonth",
-                  "CEarea","CEstatRect", "CEgsaSubarea",
+                  "CEarea","CEstatRect","CEfishManUnit","CEgsaSubarea",
                   "CEjurisdArea","CEfishAreaCat","CEfreshWatNam","CEeconZone",
                   "CEnatFishAct","CEmetier6","CEIBmitiDev","CEloc",
                   "CEvesLenCat","CEfishTech","CEmesSizRan","CEsupReg",
                   "CEgeoInd","CEspeConTech","CEdeepSeaReg" )
 
 CLkeyColumns <- c("CLrecType","CLvesFlagCou","CLyear","CLquar","CLmonth",
-                  "CLarea","CLstatRect", "CLgsaSubarea",
+                  "CLarea","CLstatRect","CLfishManUnit","CLgsaSubarea",
                   "CLjurisdArea","CLfishAreaCat","CLfreshWatNam","CLeconZone",
                   "CLnatFishAct","CLmetier6","CLIBmitiDev","CLloc",
                   "CLvesLenCat","CLfishTech","CLmesSizRan","CLsupReg",
                   "CLgeoInd","CLspeConTech","CLdeepSeaReg")
+
+# Quick fix
+CL$CLfishManUnit <- as.character(CL$CLfishManUnit)
+CE$CEfishManUnit <- as.character(CE$CEfishManUnit)
 
 CEkeys <- CE %>%
   group_by_at(CEkeyColumns) %>% 
