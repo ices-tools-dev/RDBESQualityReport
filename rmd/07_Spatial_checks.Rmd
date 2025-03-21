@@ -189,6 +189,8 @@ DT::datatable(CL_DF_wrong_areas, filter = 'top', rownames = FALSE)
 
 CE and CL data points are plotted to the ICES rectangle centroids. A map third map, shows CL data points for which no corresponding CE data points has been submitted. Note that -9 is allowed as unknown ICES rectangle and therefore could lead to such discrepancy between CL and CE spatial data.
 
+The top 20 metiers are determined based on the CL official weight. The corresponding metiers are then filtered from the CE table and matched with the CL. 
+
 ```{r  mapCE, include = FALSE,  echo=FALSE, message=FALSE, warning = FALSE}
 # Load world data
 world <- ne_countries(scale = "medium", returnclass = "sf")
