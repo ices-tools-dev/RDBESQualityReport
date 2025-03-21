@@ -104,7 +104,7 @@ rcgq1[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = 
 
 ```
 
-```{r results = "asis", fig.dim= c(12, 8)}
+```{r results = "asis", eval = doNextChunkLan,fig.dim= c(12, 8)}
 
 for(i in unique(names(rcgq1))){
     # The tabset level here has to be lower than the
@@ -136,7 +136,7 @@ rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = C
 } 
 ```
 
-```{r results = "asis", fig.dim= c(12, 8)}
+```{r results = "asis",eval = doNextChunkBMS, fig.dim= c(12, 8)}
 
 for(i in unique(names(rcgq))){
     # The tabset level here has to be lower than the
@@ -170,7 +170,7 @@ tab[[i]] <- filter(CLws, Code %in% i)
 ```
 
 
-```{r results = "asis", fig.dim= c(12, 8)}
+```{r results = "asis", eval = doNextChunkDis, fig.dim= c(12, 8)}
 
 for(i in unique(names(rcgq))){
     # The tabset level here has to be lower than the
