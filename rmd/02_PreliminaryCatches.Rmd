@@ -4,16 +4,18 @@
 The [preliminary catch statistics](https://data.ices.dk/rec12/login.aspx) **of the most recent data year** provided to ICES are compared by species and area.
 
 ```{r}
+
+# TODO: Use vessel flag country instead because it's picking up landings from other countries with CLvesFlagCou
 prelC1 <- gather(prelC,  CatchCategory, PrelCWeight, -c(Year, AphiaID, Species.Latin.Name, Area, Country))
-prelC1 <- filter(prelC1, Country %in%  unique(CL$CLlanCou))
+prelC1 <- filter(prelC1, Country %in%  unique(CL$CLvesFlagCou))
 
 CL1 <- CL %>%
-  group_by(CLarea, CLyear, CLlanCou, CLcatchCat, CLspecCode, LatinName) %>%
+  group_by(CLarea, CLyear, CLvesFlagCou, CLcatchCat, CLspecCode, LatinName) %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
             CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
 CL2 <- filter(CL1, CLyear %in% unique(prelC1$Year))
 
-prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLlanCou", "AphiaID" = "CLspecCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCat"))
+prelCatches <- left_join(prelC1, CL2, by = c("Year" = "CLyear", "Country" = "CLvesFlagCou", "AphiaID" = "CLspecCode", "Species.Latin.Name" = "LatinName", "Area" = "CLarea", "CatchCategory" = "CLcatchCat"))
 
 # Change to kg 
 prelCatches$PrelCWeight <- prelCatches$PrelCWeight
