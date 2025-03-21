@@ -23,7 +23,7 @@ options(scipen=999, viewer=NULL)
 ```{r}
 # Packages 
 # Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
+list.of.packages <- c("icesVocab", "ggplot", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
