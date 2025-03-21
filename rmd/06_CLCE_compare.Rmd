@@ -21,6 +21,7 @@ CLkeyColumns <- c("CLrecType","CLvesFlagCou","CLyear","CLquar","CLmonth",
                   "CLgeoInd","CLspeConTech","CLdeepSeaReg")
 
 # Quick fix
+# TODO: Specify class for each variable 
 CL$CLfishManUnit <- as.character(CL$CLfishManUnit)
 CE$CEfishManUnit <- as.character(CE$CEfishManUnit)
 
