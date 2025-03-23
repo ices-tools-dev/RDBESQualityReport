@@ -133,8 +133,8 @@ CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key"))
 
 ```{r}
 # Transform kg to t 
-CL$CLoffWeight <- round(CL$CLoffWeight/1000, digits = 0)
-CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 0)
+CL$CLoffWeight <- round(CL$CLoffWeight/1000, digits = 3)
+CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 3)
 ```
 
 
