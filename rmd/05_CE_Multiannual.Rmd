@@ -18,31 +18,21 @@ CEtr1 <- CEtr %>%
 
 ggplot(CEtr1, aes(CEyear, NumberofTrips, fill = NumberofTripsSource)) +
   geom_bar(stat = "identity", position = "dodge") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm"))
+  RDBES_FILL +
+  rdbes_theme() +
+  ylab("Number of trips") +
+  labs(fill = "Trip source")
 
-CEtr %>%
-  datatable(
-    extensions = "Buttons",
-    rownames   = FALSE,
-    options    = list(
-      dom        = "Blfrtip",
-      buttons    = c("copy", "csv", "excel"),
-      lengthMenu = list(c(10, 25, 50, -1), c(10, 25, 50, "All"))
-    )
-  )
+rdbes_dt(CEtr, caption = "Total fractional and dominant trips by year")
 ```
 
 ```{r ce-trips-scatter}
 ggplot(CE, aes(CEnumFracTrips, CEnumDomTrip)) +
-  geom_point() +
+  geom_point(size = 2, alpha = 0.7, colour = "#66a182") +
   facet_grid(. ~ CEyear) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm"))
+  rdbes_theme() +
+  xlab("Fractional trips") +
+  ylab("Dominant trips")
 ```
 
 ### By gear
@@ -57,9 +47,7 @@ CEg <- CE %>%
   ) %>%
   select(CEyear, CEmetier4, CEnumFracTrips, CEnumDomTrip)
 
-datatable(CEg,
-          caption  = "Number of dominant and fractional trips by gear and year",
-          rownames = FALSE)
+rdbes_dt(CEg, caption = "Number of dominant and fractional trips by gear and year")
 
 CEg1 <- CEg %>%
   pivot_longer(c(CEnumFracTrips, CEnumDomTrip),
@@ -71,12 +59,12 @@ CEg1 %>%
   ggplot(aes(reorder(CEmetier4, -TotT), CEtrips, fill = CEyear)) +
   geom_bar(stat = "identity") +
   facet_wrap(CEtripssource ~ .) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  RDBES_FILL +
+  rdbes_theme() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   xlab("Gear") +
-  ylab("Number of trips")
+  ylab("Number of trips") +
+  labs(fill = "Year")
 ```
 
 ## Fishing days
@@ -86,15 +74,14 @@ CEfd <- CE %>%
   group_by(CEyear) %>%
   summarise(CEsciFishDay = sum(CEsciFishDay, na.rm = TRUE), .groups = "drop")
 
-datatable(CEfd, caption = "Total scientific fishing days by year", rownames = FALSE)
+rdbes_dt(CEfd, caption = "Total scientific fishing days by year")
 ```
 
 ```{r ce-fishdays-scatter}
 ggplot(CE, aes(CEsciDaySea, CEsciFishDay)) +
-  geom_point() +
+  geom_point(size = 2, alpha = 0.7, colour = "#66a182") +
   facet_grid(. ~ CEyear) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm"))
+  rdbes_theme() +
+  xlab("Scientific days at sea") +
+  ylab("Scientific fishing days")
 ```

@@ -43,10 +43,9 @@ myplots <- lapply(
            aes(x = Area, y = Weight, fill = WeightSource)) +
       geom_bar(stat = "identity", position = "dodge") +
       facet_grid(~ CatchCategory) +
-      ggtitle(sp) +
-      theme_bw() +
-      theme(text = element_text(size = 20),
-            axis.text.x = element_text(angle = 90, hjust = 1))
+      RDBES_FILL +
+      rdbes_theme() +
+      labs(title = sp, fill = "Weight source")
   }
 )
 names(myplots) <- sort(unique(prelCatches$Species.Latin.Name))

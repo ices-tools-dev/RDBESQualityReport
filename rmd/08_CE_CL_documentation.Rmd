@@ -19,16 +19,14 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
   p <- ggplot(CEdb, aes(CEdBasSciEff, value, fill = CEdSouSciEff)) +
     geom_bar(stat = "identity") +
     facet_grid(. ~ CEyear, scales = "free") +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    RDBES_FILL +
+    rdbes_theme() +
     ylab(y_label) +
-    ggtitle(title)
+    labs(fill = "Data source", title = title)
   print(p)
 
   names(CEdb)[names(CEdb) == "value"] <- metric
-  print(datatable(CEdb, caption = title, rownames = FALSE,
-                  options = list(dom = "t", scrollY = TRUE, pageLength = -1)))
+  print(rdbes_dt(CEdb, caption = title))
 }
 
 # Helper: same pattern for CL
@@ -42,16 +40,14 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
   p <- ggplot(CLdb, aes(.data[[basis_col]], value, fill = .data[[source_col]])) +
     geom_bar(stat = "identity") +
     facet_grid(. ~ CLyear, scales = "free") +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    RDBES_FILL +
+    rdbes_theme() +
     ylab(y_label) +
-    ggtitle(title)
+    labs(fill = "Data source", title = title)
   print(p)
 
   names(CLdb)[names(CLdb) == "value"] <- metric
-  print(datatable(CLdb, caption = title, rownames = FALSE,
-                  options = list(dom = "t", scrollY = TRUE, pageLength = -1)))
+  print(rdbes_dt(CLdb, caption = title))
 }
 ```
 
@@ -283,8 +279,7 @@ Proportion of records assigned to the catch-all metier `MIS_MIS_0_0_0` relative 
   names(result)[names(result) == "MIS"] <- paste0(metric_col, "_MIS")
   names(result)[names(result) == "ALL"] <- paste0(metric_col, "_ALL")
 
-  print(datatable(result, caption = caption_text, rownames = FALSE,
-                  options = list(dom = "t", scrollY = TRUE, pageLength = -1)))
+  print(rdbes_dt(result, caption = caption_text))
 }
 ```
 
@@ -325,16 +320,13 @@ CLdb <- CL %>%
 ggplot(CLdb, aes(CLdatBasStatRect, CLoffWeight, fill = CLdSoucstatRect)) +
   geom_bar(stat = "identity") +
   facet_grid(. ~ CLyear, scales = "free") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  RDBES_FILL +
+  rdbes_theme() +
   ylab("Official weight (t)") +
-  ggtitle("Official weight by year, data basis and source for statistical rectangle")
+  labs(fill = "Data source",
+       title = "Official weight by year, data basis and source for statistical rectangle")
 
-datatable(CLdb,
-          caption  = "Official weight by year, data basis and source for statistical rectangle",
-          rownames = FALSE,
-          options  = list(dom = "t", scrollY = TRUE, pageLength = -1))
+rdbes_dt(CLdb, caption = "Official weight by year, data basis and source for statistical rectangle")
 ```
 
 ### OfficialFishingDaysStatRect
@@ -349,14 +341,11 @@ CEdb <- CE %>%
 ggplot(CEdb, aes(CEdatBasStatRect, CEoffFishDay, fill = CEsoucStatRect)) +
   geom_bar(stat = "identity") +
   facet_grid(. ~ CEyear, scales = "free") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  RDBES_FILL +
+  rdbes_theme() +
   ylab("Official fishing days") +
-  ggtitle("Official fishing days by year, data basis and source for statistical rectangle")
+  labs(fill = "Data source",
+       title = "Official fishing days by year, data basis and source for statistical rectangle")
 
-datatable(CEdb,
-          caption  = "Official fishing days by year, data basis and source for statistical rectangle",
-          rownames = FALSE,
-          options  = list(dom = "t", scrollY = TRUE, pageLength = -1))
+rdbes_dt(CEdb, caption = "Official fishing days by year, data basis and source for statistical rectangle")
 ```

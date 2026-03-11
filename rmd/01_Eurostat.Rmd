@@ -35,20 +35,12 @@ eurostatComp %>%
                names_to = "WeightSource", values_to = "Weight") %>%
   ggplot(aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
+  RDBES_FILL +
+  rdbes_theme() +
   ylab("Landed weight (t)") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1))
+  labs(fill = "Weight source")
 ```
 
 ```{r eurostat-table}
-eurostatComp %>%
-  datatable(
-    extensions = "Buttons",
-    options    = list(
-      dom        = "Blfrtip",
-      buttons    = c("copy", "csv", "excel"),
-      lengthMenu = list(c(10, 25, 50, -1), c(10, 25, 50, "All"))
-    )
-  )
+rdbes_dt(eurostatComp, caption = "Eurostat vs CL weight comparison")
 ```

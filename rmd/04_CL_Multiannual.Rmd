@@ -18,19 +18,13 @@ CLw <- CL %>%
 ggplot(CLw, aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
   facet_grid(CLcatchCat ~ ., scales = "free") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  rdbes_theme() +
   ylab("Weight (t)") +
   ggtitle("Total weight by year and catch category")
 
 CLw %>%
   pivot_wider(names_from = CLcatchCat, values_from = Weight) %>%
-  datatable(
-    caption  = "Total weight annually by catch category and weight source",
-    rownames = FALSE,
-    options  = list(dom = 't')
-  )
+  rdbes_dt(caption = "Total weight annually by catch category and weight source")
 ```
 
 ### By RCG region
@@ -52,9 +46,7 @@ for (i in unique(CLws$Code)) {
                      aes(CLarea, CLsciWeight, fill = CLyear)) +
     geom_bar(stat = "identity", position = "dodge") +
     facet_grid(CLdBasSciWeig ~ CLdSouSciWeig) +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1))
+    rdbes_theme()
   tab[[i]] <- filter(CLws, Code == i)
 }
 ```
@@ -90,9 +82,7 @@ for (i in unique(CLws_lan$Code)) {
                        aes(CLarea, CLsciWeight, fill = CLyear)) +
     geom_bar(stat = "identity", position = "dodge") +
     facet_grid(CLquar ~ .) +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    rdbes_theme() +
     ylab("Scientific weight (t)")
   tab[[i]] <- filter(CLws_lan, Code == i)
 }
@@ -122,9 +112,7 @@ for (i in unique(CLws_bms$Code)) {
                            aes(CLarea, CLsciWeight, fill = CLyear)) +
     geom_bar(stat = "identity", position = "dodge") +
     facet_grid(CLquar ~ .) +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    rdbes_theme() +
     ylab("Scientific weight (t)")
   tab[[i]] <- filter(CLws_bms, Code == i)
 }
@@ -154,9 +142,7 @@ for (i in unique(CLws_dis$Code)) {
                            aes(CLarea, CLsciWeight, fill = CLyear)) +
     geom_bar(stat = "identity", position = "dodge") +
     facet_grid(CLquar ~ .) +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    rdbes_theme() +
     ylab("Scientific weight (t)")
   tab[[i]] <- filter(CLws_dis, Code == i)
 }
@@ -175,28 +161,35 @@ if (exists("rcgq_dis")) {
 ### By landing vs vessel flag country
 
 ```{r cl-alluvial}
-# One row per (year, flag country, landing country) — alluvial needs a single
-# y value per flow; pivot_longer would create duplicate flows and corrupt the plot.
+# Summarise to one row per (year, flag country, landing country).
 CLvs <- CL %>%
-  group_by(CLyear, CLlanCou, CLvesFlagCou, CLdBasSciWeig) %>%
-  summarise(
-    CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
-    .groups = "drop"
-  )
+  group_by(CLyear, CLvesFlagCou, CLlanCou) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+  mutate(alluvium = row_number())   # unique flow ID required by ggalluvial
 
-ggplot(CLvs,
-       aes(axis1 = CLvesFlagCou, axis2 = CLlanCou,
-           y = CLsciWeight, fill = CLdBasSciWeig)) +
-  scale_x_discrete(limits = c("Vessel Flag Country", "Landing Country"),
-                   expand = c(0.1, 0.1)) +
+# Manually build lodes format: two rows per flow (one per axis)
+CLvs_lodes <- bind_rows(
+  CLvs %>% mutate(Axis = "Vessel Flag Country", Country = CLvesFlagCou),
+  CLvs %>% mutate(Axis = "Landing Country",     Country = CLlanCou)
+) %>%
+  mutate(Axis = factor(Axis, levels = c("Vessel Flag Country", "Landing Country")))
+
+ggplot(CLvs_lodes,
+       aes(x        = Axis,
+           y        = CLsciWeight,
+           stratum  = Country,
+           alluvium = alluvium,
+           fill     = Country,
+           label    = Country)) +
+  geom_flow(alpha = 0.5, colour = "white", linewidth = 0.3) +
+  geom_stratum(alpha = 0.9, colour = "white") +
+  geom_text(stat = "stratum", size = 2.8, fontface = "bold", colour = "white") +
+  scale_fill_viridis_d(option = "D", guide = "none") +
+  rdbes_theme() +
+  theme(axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  xlab(NULL) +
   ylab("Scientific weight (t)") +
-  geom_alluvium() +
-  geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
-  scale_fill_brewer(palette = "Set2", name = "Data basis") +
-  theme_bw() +
-  theme(text = element_text(size = 14)) +
-  facet_wrap(. ~ CLyear)
+  facet_wrap(. ~ CLyear, scales = "free_y")
 ```
 
 ### By top 20 species
@@ -233,12 +226,12 @@ CLLoc <- .top20_species(CL, "Lan")
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_wrap(CLweightSource ~ ., scales = "free_y") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  RDBES_FILL +
+  rdbes_theme() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   xlab("Species") +
-  ylab("Weight (t)")
+  ylab("Weight (t)") +
+  labs(fill = "Year")
 ```
 
 ```{r cl-top20-bms, eval=doNextChunkBMS, results='asis'}
@@ -247,12 +240,12 @@ CLLoc <- .top20_species(CL, "BMS")
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_wrap(CLweightSource ~ ., scales = "free_y") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  RDBES_FILL +
+  rdbes_theme() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   xlab("Species") +
-  ylab("Weight (t)")
+  ylab("Weight (t)") +
+  labs(fill = "Year")
 ```
 
 ```{r cl-top20-dis, eval=doNextChunkDis, results='asis'}
@@ -261,12 +254,12 @@ CLLoc <- .top20_species(CL, "RegDis")
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_wrap(CLweightSource ~ ., scales = "free_y") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  RDBES_FILL +
+  rdbes_theme() +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
   xlab("Species") +
-  ylab("Weight (t)")
+  ylab("Weight (t)") +
+  labs(fill = "Year")
 ```
 
 ### By vessel length category
@@ -279,7 +272,7 @@ CLvl <- CL %>%
     CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
     .groups = "drop"
   )
-datatable(CLvl, caption = "Total weight by vessel length category and year", rownames = FALSE)
+rdbes_dt(CLvl, caption = "Total weight by vessel length category and year")
 ```
 
 ```{r cl-veslen-lan, eval=doNextChunkLan, results='asis'}
@@ -293,9 +286,7 @@ CLw_lan <- CL %>%
 
 ggplot(CLw_lan, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  rdbes_theme() +
   ylab("Weight (t)")
 ```
 
@@ -310,9 +301,7 @@ CLw_bms <- CL %>%
 
 ggplot(CLw_bms, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  rdbes_theme() +
   ylab("Weight (t)")
 ```
 
@@ -327,9 +316,7 @@ CLw_dis <- CL %>%
 
 ggplot(CLw_dis, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  rdbes_theme() +
   ylab("Weight (t)")
 ```
 
@@ -342,17 +329,14 @@ CLg <- CL %>%
 
 CLg %>%
   pivot_wider(names_from = CLmetier4, values_from = CLsciWeight) %>%
-  datatable(caption = "Scientific weight (t) by gear and year", rownames = FALSE)
+  rdbes_dt(caption = "Scientific weight (t) by gear and year")
 
 CLg %>%
   group_by(CLmetier4) %>%
   mutate(TotW = sum(CLsciWeight)) %>%
   ggplot(aes(reorder(CLmetier4, -TotW), CLsciWeight, fill = CLyear)) +
   geom_bar(stat = "identity") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  rdbes_theme() +
   xlab("Gear") +
   ylab("Scientific weight (t)")
 ```
@@ -388,10 +372,7 @@ CLLoc <- .top20_metier(CL, "Lan")
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLyear)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_wrap(CLweightSource ~ ., scales = "free_y") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  rdbes_theme() +
   xlab("Metier level 6") +
   ylab("Weight (t)")
 ```
@@ -402,10 +383,7 @@ CLLoc <- .top20_metier(CL, "BMS")
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLweightSource)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_grid(CLyear ~ .) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  rdbes_theme() +
   xlab("Metier level 6") +
   ylab("Weight (t)")
 ```
@@ -416,10 +394,7 @@ CLLoc <- .top20_metier(CL, "RegDis", group_vars = c("topMetiers", "CLyear", "CLr
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLweightSource)) +
   geom_bar(position = "stack", stat = "identity") +
   facet_grid(CLyear ~ CLregDisCat) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  rdbes_theme() +
   xlab("Metier level 6") +
   ylab("Weight (t)")
 ```
@@ -449,10 +424,7 @@ CLvalS <- CLval %>%
 
 ggplot(CLvalS, aes(reorder(topCLSpecies, -TotV), CLlanVal, fill = CLyear)) +
   geom_bar(position = "stack", stat = "identity") +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-        legend.key.size = unit(2, "cm")) +
+  rdbes_theme() +
   xlab("Species") +
   ylab("Official landing value")
 ```
@@ -465,11 +437,10 @@ val <- list()
 for (i in sort(unique(CL2$topCLSpecies))) {
   val[[i]] <- ggplot(filter(CL2, topCLSpecies == i),
                      aes(CLlanVal, CLsciWeight, color = CLyear)) +
-    geom_point() +
-    theme_bw() +
-    theme(text = element_text(size = 20),
-          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
-          legend.key.size = unit(2, "cm"))
+    geom_point(size = 2, alpha = 0.7) +
+    RDBES_COL +
+    rdbes_theme() +
+    labs(color = "Year")
 }
 ```
 

@@ -6,7 +6,11 @@ output:
     toc: true
     toc_depth: 4
     number_sections: true
-    toc_float: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    theme: flatly
+    highlight: kate
 params:
   RDBESfile:        !r c("", "")
   eurostat:         FALSE
@@ -15,7 +19,6 @@ params:
   fleetRegister:    FALSE
   fleetRegisterFile: ""
 ---
-title: "RDBES National Quality Report"
 
 ```{r setup, include=FALSE}
 # Use a per-session temp directory for figures so no figure-html folder is
@@ -34,13 +37,45 @@ options(scipen = 999)
 options(viewer = function(...) invisible(NULL))
 ```
 
+```{css report-style, echo=FALSE}
+/* ── Typography ─────────────────────────────────────────────── */
+body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+              font-size: 14px; color: #2c2c2c; line-height: 1.6; }
+h1, h2, h3  { font-weight: 600; color: #1a3a4a; }
+h1          { border-bottom: 2px solid #2a9d8f; padding-bottom: 6px; }
+h2          { border-bottom: 1px solid #dee2e6; padding-bottom: 4px; }
+p           { color: #3d3d3d; }
+
+/* ── TOC ─────────────────────────────────────────────────────── */
+#TOC        { background: #f8fafc; border: 1px solid #e2e8f0;
+              border-radius: 6px; padding: 12px 16px; font-size: 13px; }
+#TOC a      { color: #2a9d8f; }
+#TOC a:hover{ color: #1a6b61; text-decoration: underline; }
+
+/* ── Tables (DT) ─────────────────────────────────────────────── */
+.dataTables_wrapper { font-size: 13px; margin-bottom: 1.5em; }
+table.dataTable thead th {
+  background: #1a3a4a; color: #ffffff; font-weight: 600;
+  border-bottom: 2px solid #2a9d8f !important; }
+table.dataTable tbody tr:hover { background: #eef7f6 !important; }
+.dt-button   { background: #2a9d8f !important; color: #fff !important;
+               border: none !important; border-radius: 4px !important;
+               padding: 4px 10px !important; font-size: 12px !important; }
+.dt-button:hover { background: #21867a !important; }
+
+/* ── Callout box for intro text ──────────────────────────────── */
+.callout     { background: #eef7f6; border-left: 4px solid #2a9d8f;
+               padding: 10px 16px; border-radius: 0 6px 6px 0;
+               margin-bottom: 1em; font-size: 13px; color: #2c4a48; }
+```
+
 ```{r packages, include=FALSE}
 # Install missing packages automatically
 required_packages <- c(
   "icesVocab", "tidyverse", "eurostat", "DT",
   "rnaturalearth", "rnaturalearthdata", "sf", "mapplots",
-  "kableExtra", "ggpubr", "remotes", "htmltools",
-  "knitr", "rstudioapi", "ggalluvial"
+  "ggpubr", "remotes", "htmltools",
+  "knitr", "rstudioapi", "ggalluvial", "RColorBrewer", "viridis"
 )
 new_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
 if (length(new_packages)) install.packages(new_packages, quiet = TRUE)
@@ -55,16 +90,77 @@ suppressPackageStartupMessages({
   library(sf)
   library(knitr)
   library(mapplots)
-  library(kableExtra)
   library(ggpubr)
   library(htmltools)
   library(ggalluvial)
+  library(RColorBrewer)
 })
 ```
 
 ```{r load-utils, include=FALSE}
 # Source utility functions (path relative to this .Rmd file)
 source(file.path(dirname(knitr::current_input(dir = TRUE)), "..", "utils", "utils.R"))
+```
+
+```{r shared-style, include=FALSE}
+# ---------------------------------------------------------------------------
+# Shared ggplot theme and colour palette used by every plot in this report
+# ---------------------------------------------------------------------------
+rdbes_theme <- function(...) {
+  theme_minimal(base_size = 12, base_family = "sans") +
+    theme(
+      axis.text.x      = element_text(angle = 45, hjust = 1, colour = "grey30"),
+      axis.text.y      = element_text(colour = "grey30"),
+      axis.title       = element_text(size = 11, colour = "grey20"),
+      axis.line        = element_line(colour = "grey80"),
+      legend.title     = element_text(size = 10, face = "bold"),
+      legend.text      = element_text(size = 9),
+      legend.key.size  = unit(0.7, "cm"),
+      legend.position  = "right",
+      strip.text       = element_text(size = 10, face = "bold", colour = "grey20"),
+      strip.background = element_rect(fill = "#eef2f7", colour = NA),
+      panel.grid.major = element_line(colour = "grey92", linewidth = 0.4),
+      panel.grid.minor = element_blank(),
+      panel.border     = element_blank(),
+      plot.title       = element_text(size = 12, face = "bold", colour = "grey15", hjust = 0),
+      plot.subtitle    = element_text(size = 10, colour = "grey40", hjust = 0),
+      plot.margin      = margin(8, 8, 8, 8),
+      ...
+    )
+}
+
+# Discrete colour palettes — consistent across all plots
+RDBES_PALETTE <- c("#2a9d8f", "#e76f51", "#457b9d", "#e9c46a",
+                   "#264653", "#f4a261", "#a8dadc", "#e63946")
+
+RDBES_FILL <- scale_fill_manual(values = RDBES_PALETTE)
+RDBES_COL  <- scale_colour_manual(values = RDBES_PALETTE)
+
+# ---------------------------------------------------------------------------
+# Shared DT helper — all tables get the same look + Excel export button
+# ---------------------------------------------------------------------------
+rdbes_dt <- function(data, caption = NULL, filter = "none", ...) {
+  DT::datatable(
+    data,
+    caption    = caption,
+    filter     = filter,
+    rownames   = FALSE,
+    extensions = "Buttons",
+    class      = "stripe hover compact",
+    options    = list(
+      dom        = "Blfrtip",
+      buttons    = list(
+        list(extend = "excel",
+             text   = "<i class='fas fa-file-excel'></i> Excel",
+             title  = if (!is.null(caption)) caption else "RDBES export")
+      ),
+      lengthMenu = list(c(10, 25, 50, -1), c("10", "25", "50", "All")),
+      pageLength = 10,
+      scrollX    = TRUE
+    ),
+    ...
+  )
+}
 ```
 
 ```{r load-aux-data, include=FALSE}
@@ -136,7 +232,9 @@ CL <- CL %>%
   )
 ```
 
+<div class="callout">
 This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its primary purpose is to serve as a resource for data submitters, helping them identify and correct potential errors before the submission deadline. By utilising this script, data submitters can improve the accuracy and completeness of their data, thereby improving the overall quality and reliability of the submitted information.
+</div>
 
 # Summary
 
@@ -168,10 +266,8 @@ tabN1 <- bind_rows(CLr, CEr) %>%
 
 tabN2 <- tabN1 %>% pivot_wider(names_from = Year, values_from = n)
 
-kbl(tabN2, escape = FALSE,
-    caption = "Number of records in the CE and CL tables by year",
-    align = rep("c", ncol(tabN2))) %>%
-  kable_styling(bootstrap_options = "striped")
+rdbes_dt(tabN2, caption = "Number of records in the CE and CL tables by year",
+         escape = FALSE)
 ```
 
 ```{r summary-metiers}
@@ -200,10 +296,8 @@ tabm1 <- bind_rows(CLm, CEm) %>%
 
 tabm2 <- tabm1 %>% pivot_wider(names_from = Year, values_from = Nmet)
 
-kbl(tabm2, escape = FALSE,
-    caption = "Number of unique metiers level 6 in the CE and CL tables by year",
-    align = rep("c", ncol(tabm2))) %>%
-  kable_styling(bootstrap_options = "striped")
+rdbes_dt(tabm2, caption = "Number of unique metiers level 6 in the CE and CL tables by year",
+         escape = FALSE)
 ```
 
 ```{r summary-vessels}
@@ -242,10 +336,8 @@ tabv1 <- bind_rows(CLv, CEv) %>%
 
 tabv2 <- tabv1 %>% pivot_wider(names_from = Year, values_from = Nves)
 
-kbl(tabv2, escape = FALSE,
-    caption = "Number of unique vessels in the CE and CL tables by year",
-    align = rep("c", ncol(tabv2))) %>%
-  kable_styling(bootstrap_options = "striped")
+rdbes_dt(tabv2, caption = "Number of unique vessels in the CE and CL tables by year",
+         escape = FALSE)
 ```
 
 ```{r eval-auxiliary, include=FALSE}

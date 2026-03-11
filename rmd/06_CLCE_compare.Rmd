@@ -77,6 +77,8 @@ if (nrow(keysSummary) > 0 && any(!is.na(keysSummary$vesFlagCou))) {
     ggplot(keysSummary, aes(year, n, fill = dataset)) +
       geom_bar(stat = "identity", position = "dodge") +
       facet_wrap(~ vesFlagCou, scales = "free_y") +
+      RDBES_FILL +
+      rdbes_theme() +
       labs(
         y     = "Number of unique keys",
         x     = "Year",
@@ -95,7 +97,7 @@ if (nrow(keysSummary) > 0 && any(!is.na(keysSummary$vesFlagCou))) {
 lanWoEffort <- CLkeys %>%
   anti_join(CEkeys, by = join_cols)
 
-DT::datatable(lanWoEffort, filter = 'top', rownames = FALSE)
+rdbes_dt(lanWoEffort, caption = "Landings without corresponding effort", filter = "top")
 ```
 
 ## Tons per fishing day from merged CE and CL datasets
@@ -120,26 +122,28 @@ if (nrow(CECL) == 0) {
     print(
       CECL %>%
         ggplot(aes(gearType, tonsPerFishingDay)) +
-        geom_boxplot(outlier.color = "red3") +
+        geom_boxplot(outlier.colour = "red3", fill = "#8da0cb", alpha = 0.7) +
         facet_wrap(~ vesLenCat, scales = "free") +
+        rdbes_theme() +
         labs(y = "Tons per fishing day", x = "Gear type",
              title = "Tons per fishing day by gear and vessel length")
     )
     print(
       CECL %>%
         ggplot(aes(vesLenCat, tonsPerFishingDay)) +
-        geom_boxplot(outlier.color = "red3") +
+        geom_boxplot(outlier.colour = "red3", fill = "#8da0cb", alpha = 0.7) +
         facet_wrap(~ gearType, scales = "free") +
+        rdbes_theme() +
         labs(y = "Tons per fishing day", x = "Vessel length",
-             title = "Tons per fishing day by vessel length and gear") +
-        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+             title = "Tons per fishing day by vessel length and gear")
     )
   } else {
     message("vesLenCat or gearType contains only NA values — facet plots skipped.")
     print(
       CECL %>%
         ggplot(aes(tonsPerFishingDay)) +
-        geom_histogram(bins = 30, fill = "steelblue") +
+        geom_histogram(bins = 30, fill = "#8da0cb", colour = "white") +
+        rdbes_theme() +
         labs(x = "Tons per fishing day", title = "Distribution of tons per fishing day")
     )
   }
