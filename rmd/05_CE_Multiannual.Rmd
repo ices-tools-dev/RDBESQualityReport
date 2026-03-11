@@ -3,81 +3,98 @@
 
 ## Number of trips summary
 
-```{r}
-CEtr <- CE %>% 
+```{r ce-trips-total}
+CEtr <- CE %>%
   group_by(CEyear) %>%
-  summarise(CEnumFracTrips = sum(CEnumFracTrips, na.rm = TRUE),
-            CEnumDomTrip = sum(CEnumDomTrip, na.rm = TRUE))
+  summarise(
+    CEnumFracTrips = sum(CEnumFracTrips, na.rm = TRUE),
+    CEnumDomTrip   = sum(CEnumDomTrip,   na.rm = TRUE),
+    .groups = "drop"
+  )
 
-CEtr1 <- gather(CEtr, NumberofTripsSource, NumberofTrips, -CEyear)
+CEtr1 <- CEtr %>%
+  pivot_longer(c(CEnumFracTrips, CEnumDomTrip),
+               names_to = "NumberofTripsSource", values_to = "NumberofTrips")
 
 ggplot(CEtr1, aes(CEyear, NumberofTrips, fill = NumberofTripsSource)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_bw() +
-  theme(text = element_text(size = 20),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm"))
 
 CEtr %>%
-  datatable(extensions = 'Buttons', rownames = FALSE, 
-            options = list(dom = 'Blfrtip',
-                           buttons = c('copy', 'csv', 'excel'),
-                           lengthMenu = list(c(10,25,50,-1),
-                                             c(10,25,50,"All"))))
-
+  datatable(
+    extensions = "Buttons",
+    rownames   = FALSE,
+    options    = list(
+      dom        = "Blfrtip",
+      buttons    = c("copy", "csv", "excel"),
+      lengthMenu = list(c(10, 25, 50, -1), c(10, 25, 50, "All"))
+    )
+  )
 ```
 
-
-```{r}
+```{r ce-trips-scatter}
 ggplot(CE, aes(CEnumFracTrips, CEnumDomTrip)) +
   geom_point() +
-  facet_grid(.~CEyear)   +
+  facet_grid(. ~ CEyear) +
   theme_bw() +
-  theme(text = element_text(size = 20),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm"))
 ```
 
-### By gear 
+### By gear
 
-```{r}
+```{r ce-trips-gear}
 CEg <- CE %>%
   group_by(CEmetier4, CEyear) %>%
-  summarise(CEnumFracTrips = sum(CEnumFracTrips),
-            CEnumDomTrip = sum(CEnumDomTrip)) %>%
+  summarise(
+    CEnumFracTrips = sum(CEnumFracTrips, na.rm = TRUE),
+    CEnumDomTrip   = sum(CEnumDomTrip,   na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
   select(CEyear, CEmetier4, CEnumFracTrips, CEnumDomTrip)
 
-datatable(CEg, caption = "Number of dominant and fractional trips by gear and year", rownames= FALSE)
+datatable(CEg,
+          caption  = "Number of dominant and fractional trips by gear and year",
+          rownames = FALSE)
 
 CEg1 <- CEg %>%
-  gather(CEtripssource, CEtrips, -c(CEmetier4, CEyear))
+  pivot_longer(c(CEnumFracTrips, CEnumDomTrip),
+               names_to = "CEtripssource", values_to = "CEtrips")
 
-p1 <- CEg1 %>%
+CEg1 %>%
   group_by(CEmetier4, CEtripssource) %>%
-  mutate(TotT = sum(CEtrips)) %>%
-  ggplot( aes(reorder(CEmetier4, -TotT), CEtrips, fill = CEyear)) +
-  geom_bar(stat = "identity") + 
-  facet_wrap(CEtripssource~.)+
+  mutate(TotT = sum(CEtrips, na.rm = TRUE)) %>%
+  ggplot(aes(reorder(CEmetier4, -TotT), CEtrips, fill = CEyear)) +
+  geom_bar(stat = "identity") +
+  facet_wrap(CEtripssource ~ .) +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("Gear") + 
-  ylab("Number of trips") 
-
-
-print(p1)
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Gear") +
+  ylab("Number of trips")
 ```
 
+## Fishing days
 
-## Fishing days 
-
-```{r}
+```{r ce-fishdays-total}
 CEfd <- CE %>%
   group_by(CEyear) %>%
-  summarise(CEsciFishDay = sum(CEsciFishDay, na.rm = TRUE))
+  summarise(CEsciFishDay = sum(CEsciFishDay, na.rm = TRUE), .groups = "drop")
+
+datatable(CEfd, caption = "Total scientific fishing days by year", rownames = FALSE)
 ```
 
-
-```{r}
-ggplot(CE, aes(CESciDaySea, CEsciFishDay)) +
+```{r ce-fishdays-scatter}
+ggplot(CE, aes(CEsciDaySea, CEsciFishDay)) +
   geom_point() +
-  facet_grid(.~CEyear)  +
+  facet_grid(. ~ CEyear) +
   theme_bw() +
-  theme(text = element_text(size = 20),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm"))
 ```
-

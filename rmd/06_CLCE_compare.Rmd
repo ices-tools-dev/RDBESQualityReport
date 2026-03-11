@@ -1,86 +1,147 @@
 
-# CL & CE 
+# CL & CE
 
-The following analysis allows to check if landings have corresponding effort. This is done by merging CE and CL data sets using unique keys consisting of the following fields: Vessel flag country, Year, Quarter, Month, Area, Statistical rectangle, Fisheries management unit, GSA subarea, Jurisdiction area, Fishing area category, Fresh water name, Exclusive Economic Zone (EEZ), National fishing activity, Metier 6 fishing activity, Incidential by catch mitigation device, Landing location, Vessel length category, Fishing Technique, Mesh size range, Supra Region, Geographical indicator, Specific conditions to technical measures, Deep Sea Regulation.
+The following analysis checks whether landings have corresponding effort. This is done by merging the CE and CL datasets using the key fields: vessel flag country, year, quarter, month, area, statistical rectangle, fisheries management unit, GSA subarea, jurisdiction area, fishing area category, fresh water name, EEZ, national fishing activity, metier 6, incidental by-catch mitigation device, location, vessel length category, fishing technique, mesh size range, supra region, geographical indicator, specific conditions to technical measures, and deep sea regulation.
 
-## Number of unique keys in CE and CL data sets
+```{r clce-key-columns}
+CEkeyColumns <- c(
+  "CErecType", "CEvesFlagCou", "CEyear", "CEquar", "CEmonth",
+  "CEarea", "CEstatRect", "CEfishManUnit", "CEgsaSubarea",
+  "CEjurisdArea", "CEfishAreaCat", "CEfreshWatNam", "CEeconZone",
+  "CEnatFishAct", "CEmetier6", "CEIBmitiDev", "CEloc",
+  "CEvesLenCat", "CEfishTech", "CEmesSizRan", "CEsupReg",
+  "CEgeoInd", "CEspeConTech", "CEdeepSeaReg"
+)
 
-```{r}
-CEkeyColumns <- c("CErecType","CEvesFlagCou","CEyear","CEquar","CEmonth",
-                  "CEarea","CEstatRect","CEfishManUnit","CEgsaSubarea",
-                  "CEjurisdArea","CEfishAreaCat","CEfreshWatNam","CEeconZone",
-                  "CEnatFishAct","CEmetier6","CEIBmitiDev","CEloc",
-                  "CEvesLenCat","CEfishTech","CEmesSizRan","CEsupReg",
-                  "CEgeoInd","CEspeConTech","CEdeepSeaReg" )
+CLkeyColumns <- c(
+  "CLrecType", "CLvesFlagCou", "CLyear", "CLquar", "CLmonth",
+  "CLarea", "CLstatRect", "CLfishManUnit", "CLgsaSubarea",
+  "CLjurisdArea", "CLfishAreaCat", "CLfreshWatNam", "CLeconZone",
+  "CLnatFishAct", "CLmetier6", "CLIBmitiDev", "CLloc",
+  "CLvesLenCat", "CLfishTech", "CLmesSizRan", "CLsupReg",
+  "CLgeoInd", "CLspeConTech", "CLdeepSeaReg"
+)
+```
 
-CLkeyColumns <- c("CLrecType","CLvesFlagCou","CLyear","CLquar","CLmonth",
-                  "CLarea","CLstatRect","CLfishManUnit","CLgsaSubarea",
-                  "CLjurisdArea","CLfishAreaCat","CLfreshWatNam","CLeconZone",
-                  "CLnatFishAct","CLmetier6","CLIBmitiDev","CLloc",
-                  "CLvesLenCat","CLfishTech","CLmesSizRan","CLsupReg",
-                  "CLgeoInd","CLspeConTech","CLdeepSeaReg")
+## Number of unique keys in CE and CL datasets
 
+```{r clce-unique-keys}
 CEkeys <- CE %>%
-  group_by_at(CEkeyColumns) %>% 
-  summarise(CESciDaySea = sum(CESciDaySea, na.rm=T),
-            CEsciFishDay = sum(CEsciFishDay, na.rm = T))
-colnames(CEkeys) <- sub("^CE","",colnames(CEkeys))
+  group_by(across(all_of(CEkeyColumns))) %>%
+  summarise(
+    CEsciDaySea  = sum(CEsciDaySea,  na.rm = TRUE),
+    CEsciFishDay = sum(CEsciFishDay, na.rm = TRUE),
+    .groups = "drop"
+  )
+colnames(CEkeys) <- sub("^CE", "", colnames(CEkeys))
 
 CLkeys <- CL %>%
-  group_by_at(CLkeyColumns) %>% 
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm=T))
-colnames(CLkeys) <- sub("^CL","",colnames(CLkeys))
+  group_by(across(all_of(CLkeyColumns))) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
+colnames(CLkeys) <- sub("^CL", "", colnames(CLkeys))
 
-keysSummary <- CEkeys %>% 
-  rbind(CLkeys) %>% 
-  group_by(vesFlagCou,year,recType) %>% 
-  summarise(n=n())
+# Join columns: the 23 shared spatial/temporal/metier key fields.
+# "recType" is intentionally excluded — its value is always "CE" vs "CL",
+# so including it would make every join produce zero rows.
+# Metric columns are also excluded.
+non_join <- c("recType", "sciDaySea", "sciFishDay", "sciWeight")
+join_cols <- intersect(
+  setdiff(colnames(CEkeys), non_join),
+  setdiff(colnames(CLkeys), non_join)
+)
+```
 
-ggplot(keysSummary, aes(year, n, fill = recType)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_wrap(~vesFlagCou, scales = "free_y")+
-  labs(y = "Number of unique keys",
-       x = "Year",
-       fill = "Record type",
-       title = "Comparison of CL and CE unique keys")
+```{r clce-key-setdiff-check}
+# Issue #13: warn about year mismatches before merging
+cl_years_key <- sort(unique(CLkeys$year))
+ce_years_key <- sort(unique(CEkeys$year))
+missing_ce   <- setdiff(cl_years_key, ce_years_key)
+missing_cl   <- setdiff(ce_years_key, cl_years_key)
+if (length(missing_ce) > 0)
+  message("Years in CL keys but not CE keys: ", paste(missing_ce, collapse = ", "))
+if (length(missing_cl) > 0)
+  message("Years in CE keys but not CL keys: ", paste(missing_cl, collapse = ", "))
+```
 
+```{r clce-key-plot}
+# Add an explicit dataset label before stripping prefixes so the plot legend works
+CEkeys_lab <- CEkeys %>% mutate(dataset = "CE")
+CLkeys_lab <- CLkeys %>% mutate(dataset = "CL")
+
+keysSummary <- bind_rows(CEkeys_lab, CLkeys_lab) %>%
+  group_by(vesFlagCou, year, dataset) %>%
+  summarise(n = n(), .groups = "drop")
+
+if (nrow(keysSummary) > 0 && any(!is.na(keysSummary$vesFlagCou))) {
+  print(
+    ggplot(keysSummary, aes(year, n, fill = dataset)) +
+      geom_bar(stat = "identity", position = "dodge") +
+      facet_wrap(~ vesFlagCou, scales = "free_y") +
+      labs(
+        y     = "Number of unique keys",
+        x     = "Year",
+        fill  = "Dataset",
+        title = "Comparison of CL and CE unique keys"
+      )
+  )
+} else {
+  message("No data to plot for CL/CE key comparison (keysSummary is empty or vesFlagCou is all NA).")
+}
 ```
 
 ## Landings without corresponding effort
 
-```{r}
+```{r clce-lan-no-effort, results='asis'}
+lanWoEffort <- CLkeys %>%
+  anti_join(CEkeys, by = join_cols)
 
-lanWoEffort <- CLkeys %>% 
-  anti_join(CEkeys, by = colnames(CEkeys)[2:24])
-rmarkdown::paged_table(lanWoEffort)
-
+DT::datatable(lanWoEffort, filter = 'top', rownames = FALSE)
 ```
 
-## Tons per fishing day calculated from merged CE and CL data sets.
+## Tons per fishing day from merged CE and CL datasets
 
-```{r}
-CECL <- CEkeys %>% 
-  inner_join(CLkeys, by = colnames(CEkeys)[2:24]) %>% 
-  mutate(tonsPerFishingDay = sciWeight / sciFishDay,
-         gearType = substr(metier6,1,3))
+```{r clce-tons-per-day, results='asis'}
+CECL <- CEkeys %>%
+  inner_join(CLkeys, by = join_cols) %>%
+  mutate(
+    tonsPerFishingDay = sciWeight / sciFishDay,
+    gearType          = substr(metier6, 1, 3)
+  )
 
-CECL %>% 
-ggplot(aes(gearType, tonsPerFishingDay)) +
-  geom_boxplot(outlier.color = "red3") +
-  facet_wrap(~vesLenCat, scales = "free")+
-  labs(y = "Tons per fishing day",
-       x = "Gear type",
-       title = "Tons per fishing day by gear and vessel length")
+# Guard: facet_wrap crashes if the faceting variable has zero non-NA levels.
+# This can happen when metier6 is entirely NA (gearType = NA after substr).
+has_veslen  <- sum(!is.na(CECL$vesLenCat)) > 0
+has_gear    <- sum(!is.na(CECL$gearType))  > 0
 
-CECL %>% 
-  ggplot(aes(vesLenCat, tonsPerFishingDay)) +
-  geom_boxplot(outlier.color = "red3") +
-  facet_wrap(~gearType, scales = "free")+
-  labs(y = "Tons per fishing day",
-       x = "Vessel length",
-       title = "Tons per fishing day by and vessel length and gear")+
-  theme(axis.text.x = element_text(angle = 45, hjust=1))
-
+if (nrow(CECL) == 0) {
+  message("No matching CL/CE keys — tons-per-fishing-day plots skipped.")
+} else {
+  if (has_veslen && has_gear) {
+    print(
+      CECL %>%
+        ggplot(aes(gearType, tonsPerFishingDay)) +
+        geom_boxplot(outlier.color = "red3") +
+        facet_wrap(~ vesLenCat, scales = "free") +
+        labs(y = "Tons per fishing day", x = "Gear type",
+             title = "Tons per fishing day by gear and vessel length")
+    )
+    print(
+      CECL %>%
+        ggplot(aes(vesLenCat, tonsPerFishingDay)) +
+        geom_boxplot(outlier.color = "red3") +
+        facet_wrap(~ gearType, scales = "free") +
+        labs(y = "Tons per fishing day", x = "Vessel length",
+             title = "Tons per fishing day by vessel length and gear") +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    )
+  } else {
+    message("vesLenCat or gearType contains only NA values — facet plots skipped.")
+    print(
+      CECL %>%
+        ggplot(aes(tonsPerFishingDay)) +
+        geom_histogram(bins = 30, fill = "steelblue") +
+        labs(x = "Tons per fishing day", title = "Distribution of tons per fishing day")
+    )
+  }
+}
 ```
-
-

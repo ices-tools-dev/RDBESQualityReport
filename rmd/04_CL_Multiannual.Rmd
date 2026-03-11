@@ -3,587 +3,479 @@
 
 ## Weight summary 
 
-
-```{r}
-
-# Total weights (sci, off) by year & catch category 
+```{r cl-weight-total}
+# Total weights (scientific, official) by year and catch category
 CLw <- CL %>%
   group_by(CLyear, CLcatchCat) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLcatchCat))
+  summarise(
+    CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+    CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  pivot_longer(cols = c(CLoffWeight, CLsciWeight),
+               names_to = "WeightSource", values_to = "Weight")
 
 ggplot(CLw, aes(CLyear, Weight, fill = WeightSource)) +
   geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLcatchCat~., scales = "free") +
+  facet_grid(CLcatchCat ~ ., scales = "free") +
   theme_bw() +
   theme(text = element_text(size = 20),
         axis.text.x = element_text(angle = 90, hjust = 1)) +
   ylab("Weight (t)") +
   ggtitle("Total weight by year and catch category")
 
-CLw1 <- spread(CLw, CLcatchCat, Weight)
-
-CLw1 %>%
-  datatable(caption = "Total weight annually by catch category and scientific/official weight" , rownames = FALSE, options = list(dom = 't'))
+CLw %>%
+  pivot_wider(names_from = CLcatchCat, values_from = Weight) %>%
+  datatable(
+    caption  = "Total weight annually by catch category and weight source",
+    rownames = FALSE,
+    options  = list(dom = 't')
+  )
 ```
-
 
 ### By RCG region
 
-#### Anually{.tabset} 
+#### Annually {.tabset}
 
-```{r}
-# Sci weight by data type & source 
+```{r cl-weight-rcg-setup}
 CLrcg <- left_join(CL, Area, by = c("CLarea" = "AreaCode")) %>%
   filter(!is.na(Code))
 
 CLws <- CLrcg %>%
-  group_by(CLyear, CLdBasSciWeig, CLdSouSciWeig,CLarea, Code) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) 
-
+  group_by(CLyear, CLdBasSciWeig, CLdSouSciWeig, CLarea, Code) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
 
 rcg <- list()
 tab <- list()
-for(i in unique(CLws$Code)){
-  rcg[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLdBasSciWeig~CLdSouSciWeig) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) 
-  
-  tab[[i]] <- filter(CLws, Code %in% i) 
+for (i in unique(CLws$Code)) {
+  rcg[[i]] <- ggplot(filter(CLws, Code == i),
+                     aes(CLarea, CLsciWeight, fill = CLyear)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_grid(CLdBasSciWeig ~ CLdSouSciWeig) +
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, hjust = 1))
+  tab[[i]] <- filter(CLws, Code == i)
 }
-
-
 ```
 
-```{r results = "asis", fig.dim= c(12, 8)}
-
-for(i in unique(names(rcg))){
-    # The tabset level here has to be lower than the
-    # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(rcg[i]), 5)
-    lapply(rcg[i], print)
-    # Prints the corresponding tables under the plot
-    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
+```{r cl-weight-rcg-plot, results="asis", fig.dim=c(12, 8)}
+for (i in names(rcg)) {
+  catHeader(i, 5)
+  lapply(rcg[i], print)
+  print(htmltools::tagList(DT::datatable(tab[[i]], rownames = FALSE, escape = FALSE)))
 }
 ```
 
 #### Quarterly
 
-```{r}
-# Check which catch categories are present and produce only these plots 
-doNextChunkLan <- any(ifelse(CL$CLcatchCat %in% "Lan", TRUE, FALSE))
-doNextChunkBMS <- any(ifelse(CL$CLcatchCat %in% "BMS", TRUE, FALSE))
-doNextChunkDis <- any(ifelse(CL$CLcatchCat %in% "RegDis", TRUE, FALSE))
+```{r cl-catch-cat-flags}
+# Determine which catch categories are present
+doNextChunkLan <- any(CL$CLcatchCat == "Lan",    na.rm = TRUE)
+doNextChunkBMS <- any(CL$CLcatchCat == "BMS",    na.rm = TRUE)
+doNextChunkDis <- any(CL$CLcatchCat == "RegDis", na.rm = TRUE)
 ```
 
+```{r cl-quarterly-landings, eval=doNextChunkLan, results='asis'}
+cat("##### Landings {.tabset} \n\n")
 
-```{r, eval = doNextChunkLan, results='asis'}
+CLws_lan <- CLrcg %>%
+  filter(CLcatchCat == "Lan") %>%
+  group_by(CLyear, CLarea, Code, CLquar) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
 
-cat("##### Landings{.tabset} \n\n")
-
-CLws <- CLrcg %>%
-  group_by(CLyear, CLarea, Code, CLquar, CLcatchCat) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))%>%
-  filter(CLcatchCat %in% "Lan")
 rcgq1 <- list()
-for(i in unique(CLws$Code)){
-rcgq1[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLquar~.) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ylab("CLsciWeight (t)")
- tab[[i]] <- filter(CLws, Code %in% i) 
-
+for (i in unique(CLws_lan$Code)) {
+  rcgq1[[i]] <- ggplot(filter(CLws_lan, Code == i),
+                       aes(CLarea, CLsciWeight, fill = CLyear)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_grid(CLquar ~ .) +
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ylab("Scientific weight (t)")
+  tab[[i]] <- filter(CLws_lan, Code == i)
 }
-
 ```
 
-```{r results = "asis", fig.dim= c(12, 8)}
-
-for(i in unique(names(rcgq1))){
-    # The tabset level here has to be lower than the
-    # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(rcgq1[i]), 6)
+```{r cl-quarterly-landings-plot, results="asis", fig.dim=c(12, 8)}
+if (exists("rcgq1")) {
+  for (i in names(rcgq1)) {
+    catHeader(i, 6)
     lapply(rcgq1[i], print)
-    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = FALSE, escape = FALSE)))
+  }
 }
 ```
 
+```{r cl-quarterly-bms, eval=doNextChunkBMS, results='asis'}
+cat("##### BMS {.tabset} \n\n")
 
+CLws_bms <- CLrcg %>%
+  filter(CLcatchCat == "BMS") %>%
+  group_by(CLyear, CLarea, Code, CLquar) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
 
-```{r , eval = doNextChunkBMS, results='asis'}
-cat("##### BMS{.tabset} \n\n")
-CLws <- CLrcg %>%
-  group_by(CLyear, CLarea, Code, CLquar, CLcatchCat) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))%>%
-  filter(CLcatchCat %in% "BMS")
-rcgq <- list()
-for(i in unique(CLws$Code)){
-rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLquar~.) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ylab("CLsciWeight (t)")
- tab[[i]] <- filter(CLws, Code %in% i) 
-} 
-```
-
-```{r results = "asis", fig.dim= c(12, 8)}
-
-for(i in unique(names(rcgq))){
-    # The tabset level here has to be lower than the
-    # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(rcgq[i]), 6)
-    lapply(rcgq[i], print)
-    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
+rcgq_bms <- list()
+for (i in unique(CLws_bms$Code)) {
+  rcgq_bms[[i]] <- ggplot(filter(CLws_bms, Code == i),
+                           aes(CLarea, CLsciWeight, fill = CLyear)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_grid(CLquar ~ .) +
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ylab("Scientific weight (t)")
+  tab[[i]] <- filter(CLws_bms, Code == i)
 }
 ```
 
-
-
-```{r, eval = doNextChunkDis, results='asis'}
-cat("##### Logbook registered discards{.tabset} \n\n")
-
-CLws <- CLrcg %>%
-  group_by(CLyear, CLarea, Code, CLquar, CLcatchCat) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))%>%
-  filter(CLcatchCat %in% "RegDis")
-rcgq <- list()
-for(i in unique(CLws$Code)){
-rcgq[[i]] <- ggplot(filter(CLws, Code %in% i), aes(CLarea, CLsciWeight, fill = CLyear)) +
-  geom_bar(stat = "identity", position = "dodge") +
-  facet_grid(CLquar~.) +
-  theme_bw() +
-  theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ylab("CLsciWeight (t)")
-tab[[i]] <- filter(CLws, Code %in% i) 
+```{r cl-quarterly-bms-plot, results="asis", fig.dim=c(12, 8)}
+if (exists("rcgq_bms")) {
+  for (i in names(rcgq_bms)) {
+    catHeader(i, 6)
+    lapply(rcgq_bms[i], print)
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = FALSE, escape = FALSE)))
+  }
 }
 ```
 
+```{r cl-quarterly-dis, eval=doNextChunkDis, results='asis'}
+cat("##### Logbook registered discards {.tabset} \n\n")
 
-```{r results = "asis", fig.dim= c(12, 8)}
+CLws_dis <- CLrcg %>%
+  filter(CLcatchCat == "RegDis") %>%
+  group_by(CLyear, CLarea, Code, CLquar) %>%
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
 
-for(i in unique(names(rcgq))){
-    # The tabset level here has to be lower than the
-    # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(rcgq[i]), 6)
-    lapply(rcgq[i], print)
-    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = F, escape = F)))
+rcgq_dis <- list()
+for (i in unique(CLws_dis$Code)) {
+  rcgq_dis[[i]] <- ggplot(filter(CLws_dis, Code == i),
+                           aes(CLarea, CLsciWeight, fill = CLyear)) +
+    geom_bar(stat = "identity", position = "dodge") +
+    facet_grid(CLquar ~ .) +
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, hjust = 1)) +
+    ylab("Scientific weight (t)")
+  tab[[i]] <- filter(CLws_dis, Code == i)
 }
 ```
 
+```{r cl-quarterly-dis-plot, results="asis", fig.dim=c(12, 8)}
+if (exists("rcgq_dis")) {
+  for (i in names(rcgq_dis)) {
+    catHeader(i, 6)
+    lapply(rcgq_dis[i], print)
+    print(htmltools::tagList(DT::datatable(tab[[i]], rownames = FALSE, escape = FALSE)))
+  }
+}
+```
 
+### By landing vs vessel flag country
 
-### By landing vs vessel flag country 
-
- 
-```{r}
-# Landing vs vessel flag country
+```{r cl-alluvial}
+# One row per (year, flag country, landing country) — alluvial needs a single
+# y value per flow; pivot_longer would create duplicate flows and corrupt the plot.
 CLvs <- CL %>%
-  group_by(CLyear, CLlanCou, CLvesFlagCou) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-CLvs<- gather(CLvs, WeightSource, Weight, -c(CLyear, CLlanCou, CLvesFlagCou))
-ggplot(data = CLvs,
-       aes(axis1 = CLvesFlagCou, axis2 = CLlanCou, y = Weight)) +
-  scale_x_discrete(limits = c("Vessel Flag Country", "Landing Country")) +
-  ylab("Weight (t)") +
-  geom_alluvium(aes(fill = WeightSource)) +
+  group_by(CLyear, CLlanCou, CLvesFlagCou, CLdBasSciWeig) %>%
+  summarise(
+    CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+ggplot(CLvs,
+       aes(axis1 = CLvesFlagCou, axis2 = CLlanCou,
+           y = CLsciWeight, fill = CLdBasSciWeig)) +
+  scale_x_discrete(limits = c("Vessel Flag Country", "Landing Country"),
+                   expand = c(0.1, 0.1)) +
+  ylab("Scientific weight (t)") +
+  geom_alluvium() +
   geom_stratum() +
-  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)), size = 3) +
+  scale_fill_brewer(palette = "Set2", name = "Data basis") +
   theme_bw() +
-  theme(text = element_text(size = 20))+
-  facet_wrap(.~CLyear)
-
+  theme(text = element_text(size = 14)) +
+  facet_wrap(. ~ CLyear)
 ```
-
-
-
 
 ### By top 20 species
 
+```{r cl-top20-species-helper}
+# Helper: build top-20-species data for a given catch category
+.top20_species <- function(data, catch_cat) {
+  sub <- filter(data, CLcatchCat == catch_cat)
+  top20 <- sub %>%
+    group_by(LatinName) %>%
+    summarise(lvTot = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+    slice_max(order_by = lvTot, n = 20) %>%
+    mutate(Top20CLSpecies = "X")
+  sub <- left_join(sub, top20, by = "LatinName") %>%
+    mutate(topCLSpecies = if_else(is.na(Top20CLSpecies), "OTH", LatinName))
+  sub %>%
+    group_by(topCLSpecies, CLyear) %>%
+    summarise(
+      CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+      CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    pivot_longer(cols = c(CLoffWeight, CLsciWeight),
+                 names_to = "CLweightSource", values_to = "CLweight") %>%
+    group_by(topCLSpecies) %>%
+    mutate(TotW = sum(CLweight, na.rm = TRUE)) %>%
+    ungroup()
+}
+```
 
-```{r, eval = doNextChunkLan, results='asis'}
-
+```{r cl-top20-lan, eval=doNextChunkLan, results='asis'}
 cat("#### Landings \n\n")
-CLlan <- filter(CL, CLcatchCat %in% "Lan")
-top20_CLSpecies <- CLlan %>%
-  group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
-  arrange(desc(lvTot)) %>%
-  top_n(20)
-top20_CLSpecies$Top20CLSpecies <- "X"
-CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
-CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
-
-CLweightS <- CL1 %>%
-  group_by(topCLSpecies, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
-  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear))
-
-CLLoc <- CLweightS %>%
-  group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight, na.rm = TRUE))
-
-
+CLLoc <- .top20_species(CL, "Lan")
 ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_wrap(CLweightSource~., scales = "free_y") +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(CLweightSource ~ ., scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Species") +
+  ylab("Weight (t)")
 ```
 
-
-
-
-```{r, eval = doNextChunkBMS, results='asis'}
-
+```{r cl-top20-bms, eval=doNextChunkBMS, results='asis'}
 cat("#### BMS \n\n")
-
-CLlan <- filter(CL, CLcatchCat %in% "BMS")
-top20_CLSpecies <- CLlan %>%
-  group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
-  arrange(desc(lvTot)) %>%
-  top_n(20)
-top20_CLSpecies$Top20CLSpecies <- "X"
-CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
-CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
-
-CLweightS <- CL1 %>%
-  group_by(topCLSpecies, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
-  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear))
-
-
-CLLoc <- CLweightS %>%
-  group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight, na.rm = TRUE))
-
-ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLweightSource)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_grid(CLyear~.) +
+CLLoc <- .top20_species(CL, "BMS")
+ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(CLweightSource ~ ., scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Species") +
+  ylab("Weight (t)")
 ```
 
-
-
-```{r, eval = doNextChunkDis, results='asis'}
-
+```{r cl-top20-dis, eval=doNextChunkDis, results='asis'}
 cat("#### Logbook registered discards \n\n")
-
-CLlan <- filter(CL, CLcatchCat %in% "RegDis")
-top20_CLSpecies <- CLlan %>%
-  group_by(LatinName) %>%
-  summarise(lvTot=sum(CLsciWeight, na.rm = TRUE)) %>%
-  arrange(desc(lvTot)) %>%
-  top_n(20)
-top20_CLSpecies$Top20CLSpecies <- "X"
-CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
-CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
-
-CLweightS <- CL1 %>%
-  group_by(topCLSpecies, CLyear, CLregDisCat) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE)) %>%
-  gather(CLweightSource, CLweight, -c(topCLSpecies, CLyear, CLregDisCat))
-
-CLLoc <- CLweightS %>%
-  group_by(topCLSpecies) %>%
-  mutate(TotW = sum(CLweight, na.rm = TRUE))
-
-ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLweightSource)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_grid(CLyear~CLregDisCat) +
+CLLoc <- .top20_species(CL, "RegDis")
+ggplot(CLLoc, aes(reorder(topCLSpecies, -TotW), CLweight, fill = CLyear)) +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(CLweightSource ~ ., scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 20),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Species") +
+  ylab("Weight (t)")
 ```
 
+### By vessel length category
 
-### By vessel length category 
-
-
-```{r}
+```{r cl-veslen-table}
 CLvl <- CL %>%
-    group_by(CLyear, CLvesLenCat) %>%
-  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-datatable(CLvl, caption = "Total weight by vessel length category by year", rownames = FALSE)
+  group_by(CLyear, CLvesLenCat) %>%
+  summarise(
+    CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+    CLsciWeight = sum(CLsciWeight, na.rm = TRUE),
+    .groups = "drop"
+  )
+datatable(CLvl, caption = "Total weight by vessel length category and year", rownames = FALSE)
 ```
 
-
-```{r, eval = doNextChunkLan, results='asis'}
-
+```{r cl-veslen-lan, eval=doNextChunkLan, results='asis'}
 cat("#### Landings \n\n")
-CLw <- CL %>%
-  filter(CLcatchCat %in% "Lan") %>%
+CLw_lan <- CL %>%
+  filter(CLcatchCat == "Lan") %>%
   group_by(CLyear, CLvesLenCat) %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLvesLenCat))
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+  pivot_longer(c(CLoffWeight, CLsciWeight), names_to = "WeightSource", values_to = "Weight")
 
-ggplot(CLw, aes(CLvesLenCat, Weight, fill = CLyear)) +
+ggplot(CLw_lan, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_bw() +
   theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1))  +
-  ylab("CLweight (t)")
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Weight (t)")
 ```
 
-```{r , eval = doNextChunkBMS, results='asis'}
+```{r cl-veslen-bms, eval=doNextChunkBMS, results='asis'}
 cat("#### BMS \n\n")
-CLw <- CL %>%
-  filter(CLcatchCat %in% "BMS") %>%
+CLw_bms <- CL %>%
+  filter(CLcatchCat == "BMS") %>%
   group_by(CLyear, CLvesLenCat) %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-CLw <- gather(CLw, WeightSource, Weight, -c(CLyear, CLvesLenCat))
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+  pivot_longer(c(CLoffWeight, CLsciWeight), names_to = "WeightSource", values_to = "Weight")
 
-ggplot(CLw, aes(CLvesLenCat, Weight, fill = CLyear)) +
+ggplot(CLw_bms, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_bw() +
   theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1))  +
-  ylab("CLweight (t)")
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Weight (t)")
 ```
 
-
-
-```{r, eval = doNextChunkDis, results='asis'}
+```{r cl-veslen-dis, eval=doNextChunkDis, results='asis'}
 cat("#### Logbook registered discards \n\n")
-
-CLlrd <- CL %>%
-  filter(CLcatchCat %in% "RegDis") %>%
+CLw_dis <- CL %>%
+  filter(CLcatchCat == "RegDis") %>%
   group_by(CLyear, CLvesLenCat) %>%
   summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
-            CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
-CLw <- gather(CLlrd, WeightSource, Weight, -c(CLyear, CLvesLenCat))
+            CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+  pivot_longer(c(CLoffWeight, CLsciWeight), names_to = "WeightSource", values_to = "Weight")
 
-ggplot(CLw, aes(CLvesLenCat, Weight, fill = CLyear)) +
+ggplot(CLw_dis, aes(CLvesLenCat, Weight, fill = CLyear)) +
   geom_bar(stat = "identity", position = "dodge") +
   theme_bw() +
   theme(text = element_text(size = 20),
-        axis.text.x = element_text(angle = 90, hjust = 1))  +
-  ylab("CLweight (t)")
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Weight (t)")
 ```
 
 ### By gear
 
-```{r}
+```{r cl-gear}
 CLg <- CL %>%
   group_by(CLmetier4, CLyear) %>%
-  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE))
+  summarise(CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop")
 
-Clt <- CLg%>%
-  spread(CLmetier4, CLsciWeight)
+CLg %>%
+  pivot_wider(names_from = CLmetier4, values_from = CLsciWeight) %>%
+  datatable(caption = "Scientific weight (t) by gear and year", rownames = FALSE)
 
-datatable(Clt, caption = "Scientific weight (t) by gear and year", rownames= FALSE)
-
-p1 <- CLg %>%
+CLg %>%
   group_by(CLmetier4) %>%
   mutate(TotW = sum(CLsciWeight)) %>%
-  ggplot( aes(reorder(CLmetier4, -TotW), CLsciWeight, fill = CLyear)) +
-  geom_bar(stat = "identity") + 
+  ggplot(aes(reorder(CLmetier4, -TotW), CLsciWeight, fill = CLyear)) +
+  geom_bar(stat = "identity") +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("Gear") + 
-  ylab("CLsciWeight (t)") 
-
-
-print(p1)
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Gear") +
+  ylab("Scientific weight (t)")
 ```
-
 
 ### By metier level 6 (top 20)
 
-```{r, eval = doNextChunkLan, results='asis'}
+```{r cl-top20-metier-helper}
+# Helper: build top-20-metier data for a given catch category
+.top20_metier <- function(data, catch_cat, group_vars = c("topMetiers", "CLyear")) {
+  sub <- filter(data, CLcatchCat == catch_cat)
+  top20 <- sub %>%
+    group_by(CLmetier6) %>%
+    summarise(lwTot = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+    slice_max(order_by = lwTot, n = 20) %>%
+    mutate(Top20metiers = "X")
+  sub <- left_join(sub, top20, by = "CLmetier6") %>%
+    mutate(topMetiers = if_else(is.na(Top20metiers), "OTH", CLmetier6))
+  sub %>%
+    group_by(across(all_of(group_vars))) %>%
+    summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE),
+              CLsciWeight = sum(CLsciWeight, na.rm = TRUE), .groups = "drop") %>%
+    pivot_longer(c(CLoffWeight, CLsciWeight),
+                 names_to = "CLweightSource", values_to = "CLweight") %>%
+    group_by(topMetiers) %>%
+    mutate(TotW = sum(CLweight, na.rm = TRUE)) %>%
+    ungroup()
+}
+```
 
+```{r cl-top20-met-lan, eval=doNextChunkLan, results='asis'}
 cat("#### Landings \n\n")
-CLlan <- filter(CL, CLcatchCat %in% "Lan")
-top20_metiers <- CLlan %>%
-  group_by(CLmetier6) %>%
-  summarise(lwTot=sum(CLsciWeight)) %>%
-  arrange(desc(lwTot)) %>%
-  top_n(20)
-top20_metiers$Top20metiers <- "X"
-CL1 <- left_join(CLlan,top20_metiers,by="CLmetier6")
-CL1$topMetiers <- ifelse(is.na(CL1$Top20metiers),"OTH",CL1$CLmetier6)
-
-CLweightS <- CL1 %>%
-  group_by(topMetiers, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
-  gather(CLweightSource, CLweight, -c(topMetiers, CLyear))
-
-CLLoc <- CLweightS %>%
-  group_by(topMetiers) %>%
-  mutate(TotW = sum(CLweight))
-
-
+CLLoc <- .top20_metier(CL, "Lan")
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLyear)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_wrap(CLweightSource~., scales = "free_y") +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_wrap(CLweightSource ~ ., scales = "free_y") +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLMetier level 6") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Metier level 6") +
+  ylab("Weight (t)")
 ```
 
-
-
-
-```{r, eval = doNextChunkBMS, results='asis'}
-
+```{r cl-top20-met-bms, eval=doNextChunkBMS, results='asis'}
 cat("#### BMS \n\n")
-
-CLlan <- filter(CL, CLcatchCat %in% "BMS")
-top20_metiers <- CLlan %>%
-  group_by(CLmetier6) %>%
-  summarise(lwTot=sum(CLsciWeight)) %>%
-  arrange(desc(lwTot)) %>%
-  top_n(20)
-top20_metiers$Top20metiers <- "X"
-CL1 <- left_join(CLlan,top20_metiers,by="CLmetier6")
-CL1$topMetiers <- ifelse(is.na(CL1$Top20metiers),"OTH",CL1$CLmetier6)
-
-CLweightS <- CL1 %>%
-  group_by(topMetiers, CLyear) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
-  gather(CLweightSource, CLweight, -c(topMetiers, CLyear))
-
-
-CLLoc <- CLweightS %>%
-  group_by(topMetiers) %>%
-  mutate(TotW = sum(CLweight))
-
+CLLoc <- .top20_metier(CL, "BMS")
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLweightSource)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_grid(CLyear~.) +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_grid(CLyear ~ .) +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Metier level 6") +
+  ylab("Weight (t)")
 ```
 
-
-
-```{r, eval = doNextChunkDis, results='asis'}
-
+```{r cl-top20-met-dis, eval=doNextChunkDis, results='asis'}
 cat("#### Logbook registered discards \n\n")
-
-CLlan <- filter(CL, CLcatchCat %in% "RegDis")
-top20_metiers <- CLlan %>%
-  group_by(CLmetier6) %>%
-  summarise(lwTot=sum(CLsciWeight)) %>%
-  arrange(desc(lwTot)) %>%
-  top_n(20)
-top20_metiers$Top20metiers <- "X"
-CL1 <- left_join(CLlan,top20_metiers,by="CLmetier6")
-CL1$topMetiers <- ifelse(is.na(CL1$Top20metiers),"OTH",CL1$CLmetier6)
-
-CLweightS <- CL1 %>%
-  group_by(topMetiers, CLyear, CLregDisCat) %>%
-  summarise(CLoffWeight = sum(CLoffWeight),
-            CLsciWeight = sum(CLsciWeight)) %>%
-  gather(CLweightSource, CLweight, -c(topMetiers, CLyear, CLregDisCat))
-
-CLLoc <- CLweightS %>%
-  group_by(topMetiers) %>%
-  mutate(TotW = sum(CLweight))
-
+CLLoc <- .top20_metier(CL, "RegDis", group_vars = c("topMetiers", "CLyear", "CLregDisCat"))
 ggplot(CLLoc, aes(reorder(topMetiers, -TotW), CLweight, fill = CLweightSource)) +
-  geom_bar(position="stack", stat="identity") +
-  facet_grid(CLyear~CLregDisCat) +
+  geom_bar(position = "stack", stat = "identity") +
+  facet_grid(CLyear ~ CLregDisCat) +
   theme_bw() +
-  theme(text = element_text(size = 20),axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLweight (t)")
-
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Metier level 6") +
+  ylab("Weight (t)")
 ```
 
+## Value summary by top 20 species
 
+```{r cl-value}
+CLlan_val <- CL %>%
+  filter(CLcatchCat == "Lan") %>%
+  mutate(CLlanVal = suppressWarnings(as.numeric(CLlanVal)))
 
-
-## Value summary by top 20 species 
-
-
-```{r}
-CLlan <- filter(CL, CLcatchCat %in% "Lan")
-CLlan$CLtotOffLanVal <- as.numeric(CLlan$CLtotOffLanVal)
-top20_CLSpecies <- CLlan %>%
+top20_val <- CLlan_val %>%
   group_by(LatinName) %>%
-  summarise(lvTot=sum(CLtotOffLanVal, na.rm=TRUE)) %>%
-  arrange(desc(lvTot)) %>%
-  top_n(20)
-top20_CLSpecies$Top20CLSpecies <- "X"
-CL1 <- left_join(CLlan,top20_CLSpecies,by="LatinName")
-CL1$topCLSpecies <- ifelse(is.na(CL1$Top20CLSpecies),"OTH",CL1$LatinName)
+  summarise(lvTot = sum(CLlanVal, na.rm = TRUE), .groups = "drop") %>%
+  slice_max(order_by = lvTot, n = 20) %>%
+  mutate(Top20CLSpecies = "X")
 
-CLvalS <- CL1 %>%
+CLval <- left_join(CLlan_val, top20_val, by = "LatinName") %>%
+  mutate(topCLSpecies = if_else(is.na(Top20CLSpecies), "OTH", LatinName))
+
+CLvalS <- CLval %>%
   group_by(topCLSpecies, CLyear) %>%
-  summarise(CLtotOffLanVal = sum(CLtotOffLanVal, na.rm = TRUE)) 
-
-CLLoc <- CLvalS %>%
+  summarise(CLlanVal = sum(CLlanVal, na.rm = TRUE), .groups = "drop") %>%
   group_by(topCLSpecies) %>%
-  mutate(TotV = sum(CLtotOffLanVal, na.rm = TRUE))
+  mutate(TotV = sum(CLlanVal, na.rm = TRUE)) %>%
+  ungroup()
 
-
-ggplot(CLLoc, aes(reorder(topCLSpecies, -TotV), CLtotOffLanVal, fill = CLyear)) +
-  geom_bar(position="stack", stat="identity") +
+ggplot(CLvalS, aes(reorder(topCLSpecies, -TotV), CLlanVal, fill = CLyear)) +
+  geom_bar(position = "stack", stat = "identity") +
   theme_bw() +
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))+
-  xlab("topCLSpecies") +
-  ylab("CLtotOffLanVal")
+  theme(text = element_text(size = 20),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+        legend.key.size = unit(2, "cm")) +
+  xlab("Species") +
+  ylab("Official landing value")
 ```
 
-###  Value vs weight{.tabset}
+### Value vs weight {.tabset}
 
-```{r}
-CL2 <- filter(CL1, topCLSpecies != "OTH")
-
+```{r cl-val-weight-setup}
+CL2 <- filter(CLval, topCLSpecies != "OTH")
 val <- list()
-for(i in sort(unique(CL2$topCLSpecies))){
-  val[[i]] <- ggplot(filter(CL2, topCLSpecies %in% i), aes(CLtotOffLanVal, CLsciWeight, color = CLyear)) +
+for (i in sort(unique(CL2$topCLSpecies))) {
+  val[[i]] <- ggplot(filter(CL2, topCLSpecies == i),
+                     aes(CLlanVal, CLsciWeight, color = CLyear)) +
     geom_point() +
-    theme_bw()+
-  theme(text = element_text(size = 20), axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1), legend.key.size = unit(2, 'cm'))
-}
-
-```
-
-
-```{r, results='asis'}
-for(i in unique(names(val))){
-    # The tabset level here has to be lower than the
-    # parent level (ie, parent is 2, so here you have to use 3)
-    catHeader(names(val[i]), 4)
-    lapply(val[i], print)
+    theme_bw() +
+    theme(text = element_text(size = 20),
+          axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1),
+          legend.key.size = unit(2, "cm"))
 }
 ```
 
-
+```{r cl-val-weight-plot, results='asis'}
+for (i in names(val)) {
+  catHeader(i, 4)
+  lapply(val[i], print)
+}
+```
