@@ -1,0 +1,351 @@
+
+# CL and CE documentation
+
+```{r doc-setup, include=FALSE}
+# Ensure CLlanVal is numeric (may be character in some export formats)
+CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
+```
+
+```{r doc-helpers, include=FALSE}
+# ---------------------------------------------------------------------------
+# Helper: aggregate one CE metric by year / data basis / data source,
+# then render a bar chart + datatable — avoids ~20x copy-paste blocks.
+# ---------------------------------------------------------------------------
+.ce_db_plot <- function(metric, y_label, title) {
+  CEdb <- CE %>%
+    group_by(CEyear, CEdBasSciEff, CEdSouSciEff) %>%
+    summarise(value = sum(.data[[metric]], na.rm = TRUE), .groups = "drop")
+
+  p <- ggplot(CEdb, aes(CEdBasSciEff, value, fill = CEdSouSciEff)) +
+    geom_bar(stat = "identity") +
+    facet_grid(. ~ CEyear, scales = "free") +
+    RDBES_FILL +
+    rdbes_theme() +
+    ylab(y_label) +
+    labs(fill = "Data source", title = title)
+  print(p)
+
+  names(CEdb)[names(CEdb) == "value"] <- metric
+  print(rdbes_dt(CEdb, caption = title))
+}
+
+# Helper: same pattern for CL
+.cl_db_plot <- function(group_var, metric, y_label, title,
+                        basis_col  = "CLdBasSciWeig",
+                        source_col = "CLdSouSciWeig") {
+  CLdb <- CL %>%
+    group_by(across(all_of(c("CLyear", basis_col, source_col)))) %>%
+    summarise(value = sum(.data[[metric]], na.rm = TRUE), .groups = "drop")
+
+  p <- ggplot(CLdb, aes(.data[[basis_col]], value, fill = .data[[source_col]])) +
+    geom_bar(stat = "identity") +
+    facet_grid(. ~ CLyear, scales = "free") +
+    RDBES_FILL +
+    rdbes_theme() +
+    ylab(y_label) +
+    labs(fill = "Data source", title = title)
+  print(p)
+
+  names(CLdb)[names(CLdb) == "value"] <- metric
+  print(rdbes_dt(CLdb, caption = title))
+}
+```
+
+## Data basis and data source {.tabset}
+
+### OfficialWeight
+
+```{r OfficialWeight}
+.cl_db_plot(metric     = "CLoffWeight",
+            y_label    = "Official weight (t)",
+            title      = "Official weight by year, data basis and data source")
+```
+
+### ScientificWeight
+
+```{r ScientificWeight}
+.cl_db_plot(metric     = "CLsciWeight",
+            y_label    = "Scientific weight (t)",
+            title      = "Scientific weight by year, data basis and data source")
+```
+
+### LandingValue
+
+```{r LandingValue}
+.cl_db_plot(metric      = "CLlanVal",
+            y_label     = "Landing value",
+            title       = "Landing value by year, data basis and data source",
+            source_col  = "CLdSouLanVal")
+```
+
+### NumberFractionalTrips
+
+```{r NumberFractionalTrips}
+.ce_db_plot("CEnumFracTrips",
+            y_label = "Number of fractional trips",
+            title   = "Number of fractional trips by year, data basis and data source")
+```
+
+### NumberDominantTrips
+
+```{r NumberDominantTrips}
+.ce_db_plot("CEnumDomTrip",
+            y_label = "Number of dominant trips",
+            title   = "Number of dominant trips by year, data basis and data source")
+```
+
+### OfficialDaysAtSea
+
+```{r OfficialDaysAtSea}
+.ce_db_plot("CEoffDaySea",
+            y_label = "Official days at sea",
+            title   = "Official days at sea by year, data basis and data source")
+```
+
+### ScientificDaysAtSea
+
+```{r ScientificDaysAtSea}
+.ce_db_plot("CEsciDaySea",
+            y_label = "Scientific days at sea",
+            title   = "Scientific days at sea by year, data basis and data source")
+```
+
+### OfficialFishingDays
+
+```{r OfficialFishingDays}
+.ce_db_plot("CEoffFishDay",
+            y_label = "Official fishing days",
+            title   = "Official fishing days by year, data basis and data source")
+```
+
+### ScientificFishingDays
+
+```{r ScientificFishingDays}
+.ce_db_plot("CEsciFishDay",
+            y_label = "Scientific fishing days",
+            title   = "Scientific fishing days by year, data basis and data source")
+```
+
+### OfficialVesselFishingHour
+
+```{r OfficialVesselFishingHour}
+.ce_db_plot("CEoffVesFishHour",
+            y_label = "Official vessel fishing hours",
+            title   = "Official vessel fishing hours by year, data basis and data source")
+```
+
+### ScientificVesselFishingHour
+
+```{r ScientificVesselFishingHour}
+.ce_db_plot("CEsciVesFishHour",
+            y_label = "Scientific vessel fishing hours",
+            title   = "Scientific vessel fishing hours by year, data basis and data source")
+```
+
+### OfficialkWDaysAtSea
+
+```{r OfficialkWDaysAtSea}
+.ce_db_plot("CEoffkWDaySea",
+            y_label = "Official kW days at sea",
+            title   = "Official kW days at sea by year, data basis and data source")
+```
+
+### ScientifickWDaysAtSea
+
+```{r ScientifickWDaysAtSea}
+.ce_db_plot("CEscikWDaySea",
+            y_label = "Scientific kW days at sea",
+            title   = "Scientific kW days at sea by year, data basis and data source")
+```
+
+### OfficialkWFishingDays
+
+```{r OfficialkWFishingDays}
+.ce_db_plot("CEoffkWFishDay",
+            y_label = "Official kW fishing days",
+            title   = "Official kW fishing days by year, data basis and data source")
+```
+
+### ScientifickWFishingDays
+
+```{r ScientifickWFishingDays}
+.ce_db_plot("CEscikWFishDay",
+            y_label = "Scientific kW fishing days",
+            title   = "Scientific kW fishing days by year, data basis and data source")
+```
+
+### OfficialkWFishingHours
+
+```{r OfficialkWFishingHours}
+.ce_db_plot("CEoffkWFishHour",
+            y_label = "Official kW fishing hours",
+            title   = "Official kW fishing hours by year, data basis and data source")
+```
+
+### ScientifickWFishingHours
+
+```{r ScientifickWFishingHours}
+.ce_db_plot("CEscikWFishHour",
+            y_label = "Scientific kW fishing hours",
+            title   = "Scientific kW fishing hours by year, data basis and data source")
+```
+
+### ScientificGTDaysAtSea
+
+```{r ScientificGTDaysAtSea}
+.ce_db_plot("CEgTDaySea",
+            y_label = "Scientific GT days at sea",
+            title   = "Scientific GT days at sea by year, data basis and data source")
+```
+
+### ScientificGTFishingDays
+
+```{r ScientificGTFishingDays}
+.ce_db_plot("CEgTFishDay",
+            y_label = "Scientific GT fishing days",
+            title   = "Scientific GT fishing days by year, data basis and data source")
+```
+
+### ScientificGTFishingHours
+
+```{r ScientificGTFishingHours}
+.ce_db_plot("CEgTFishHour",
+            y_label = "Scientific GT fishing hours",
+            title   = "Scientific GT fishing hours by year, data basis and data source")
+```
+
+### OfficialSoakingMeterHour
+
+```{r OfficialSoakingMeterHour}
+.ce_db_plot("CEoffSoakMeterHour",
+            y_label = "Official soaking meter hours",
+            title   = "Official soaking meter hours by year, data basis and data source")
+```
+
+### ScientificSoakingMeterHour
+
+```{r ScientificSoakingMeterHour}
+.ce_db_plot("CEsciSoakMeterHour",
+            y_label = "Scientific soaking meter hours",
+            title   = "Scientific soaking meter hours by year, data basis and data source")
+```
+
+### OfficialNumberHaulSets
+
+```{r OfficialNumberHaulSets}
+.ce_db_plot("CEoffNumHaulSet",
+            y_label = "Official number of hauls/sets",
+            title   = "Official number of hauls/sets by year, data basis and data source")
+```
+
+### ScientificNumberHaulSets
+
+```{r ScientificNumberHaulSets}
+.ce_db_plot("CEsciNumHaulSet",
+            y_label = "Scientific number of hauls/sets",
+            title   = "Scientific number of hauls/sets by year, data basis and data source")
+```
+
+### GearDimensions
+
+```{r GearDimensions}
+.ce_db_plot("CEgearDim",
+            y_label = "Gear dimensions",
+            title   = "Gear dimensions by year, data basis and data source")
+```
+
+## Metier allocation
+
+Proportion of records assigned to the catch-all metier `MIS_MIS_0_0_0` relative to all records, by year.
+
+```{r metier-mis-helper, include=FALSE}
+# Helper: compute MIS vs non-MIS split and percentage for a given table + metric
+.mis_table <- function(data, id_col, metric_col, caption_text) {
+  mis_flag <- data[[id_col]] == "MIS_MIS_0_0_0"
+  data$MIS_val <- ifelse(mis_flag,  data[[metric_col]], 0)
+  data$ALL_val <- ifelse(!mis_flag, data[[metric_col]], 0)
+
+  year_col <- if (grepl("^CL", id_col)) "CLyear" else "CEyear"
+
+  result <- data %>%
+    group_by(.data[[year_col]]) %>%
+    summarise(
+      MIS = sum(MIS_val, na.rm = TRUE),
+      ALL = sum(ALL_val, na.rm = TRUE),
+      .groups = "drop"
+    ) %>%
+    mutate(pct_MIS = format(round(MIS / (MIS + ALL) * 100, digits = 3), nsmall = 3))
+
+  names(result)[names(result) == "MIS"] <- paste0(metric_col, "_MIS")
+  names(result)[names(result) == "ALL"] <- paste0(metric_col, "_ALL")
+
+  print(rdbes_dt(result, caption = caption_text))
+}
+```
+
+```{r OffWeightMIS}
+.mis_table(CL, "CLmetier6", "CLoffWeight",
+           "MIS_MIS_0_0_0 share by official weight")
+```
+
+```{r SciWeightMIS}
+.mis_table(CL, "CLmetier6", "CLsciWeight",
+           "MIS_MIS_0_0_0 share by scientific weight")
+```
+
+```{r LanValMIS}
+.mis_table(CL, "CLmetier6", "CLlanVal",
+           "MIS_MIS_0_0_0 share by landing value")
+```
+
+```{r OffFishingDaysMIS}
+.mis_table(CE, "CEmetier6", "CEoffFishDay",
+           "MIS_MIS_0_0_0 share by official fishing days")
+```
+
+```{r SciFishingDaysMIS}
+.mis_table(CE, "CEmetier6", "CEsciFishDay",
+           "MIS_MIS_0_0_0 share by scientific fishing days")
+```
+
+## Rectangle source {.tabset}
+
+### OfficialWeightStatRect
+
+```{r OffWeightStatRect}
+CLdb <- CL %>%
+  group_by(CLyear, CLdatBasStatRect, CLdSoucstatRect) %>%
+  summarise(CLoffWeight = sum(CLoffWeight, na.rm = TRUE), .groups = "drop")
+
+ggplot(CLdb, aes(CLdatBasStatRect, CLoffWeight, fill = CLdSoucstatRect)) +
+  geom_bar(stat = "identity") +
+  facet_grid(. ~ CLyear, scales = "free") +
+  RDBES_FILL +
+  rdbes_theme() +
+  ylab("Official weight (t)") +
+  labs(fill = "Data source",
+       title = "Official weight by year, data basis and source for statistical rectangle")
+
+rdbes_dt(CLdb, caption = "Official weight by year, data basis and source for statistical rectangle")
+```
+
+### OfficialFishingDaysStatRect
+
+```{r FDStatRect}
+# Bug fix: tab was labelled "OfficialWeightStatRect" (duplicate) in original —
+# corrected to "OfficialFishingDaysStatRect" to match its actual content.
+CEdb <- CE %>%
+  group_by(CEyear, CEdatBasStatRect, CEsoucStatRect) %>%
+  summarise(CEoffFishDay = sum(CEoffFishDay, na.rm = TRUE), .groups = "drop")
+
+ggplot(CEdb, aes(CEdatBasStatRect, CEoffFishDay, fill = CEsoucStatRect)) +
+  geom_bar(stat = "identity") +
+  facet_grid(. ~ CEyear, scales = "free") +
+  RDBES_FILL +
+  rdbes_theme() +
+  ylab("Official fishing days") +
+  labs(fill = "Data source",
+       title = "Official fishing days by year, data basis and source for statistical rectangle")
+
+rdbes_dt(CEdb, caption = "Official fishing days by year, data basis and source for statistical rectangle")
+```

@@ -1,324 +1,305 @@
-# Spatial checks 
 
-```{r ReadData, echo=FALSE, message=FALSE, warning = FALSE}
+# Spatial checks
+
+```{r spatial-setup, include=FALSE}
 CE_DF <- CE
 CL_DF <- CL
-
 ```
 
-```{r functions, include = FALSE}
+```{r spatial-functions, include=FALSE}
 
-geom_ices_squares <- function (xlim = c(-49,70), ylim = c(36, 85.5),...){
-  outside <- F
-  if(xlim[1] < -49) {xlim[1] <- -49; outside <- T}
-  if(xlim[2] > 70)  {xlim[2] <- 70; outside <- T}
-  if(ylim[1] < -49) {ylim[1] <- -49; outside <- T}
-  if(ylim[2] > 85.5){ylim[2] <- 85.5; outside <- T}
-  if(outside) print("longitude & latitude must be inside the interval [-49;70] & [36;85.5]")
+geom_ices_squares <- function(xlim = c(-49, 70), ylim = c(36, 85.5), ...) {
+  outside <- FALSE
+  if (xlim[1] < -49)  { xlim[1] <- -49;  outside <- TRUE }
+  if (xlim[2] > 70)   { xlim[2] <- 70;   outside <- TRUE }
+  if (ylim[1] < 36)   { ylim[1] <- 36;   outside <- TRUE }   # bug fix: was < -49
+  if (ylim[2] > 85.5) { ylim[2] <- 85.5; outside <- TRUE }
+  if (outside) message("Coordinates clamped to ICES rectangle extent [-49;70] x [36;85.5].")
   list(
-    geom_vline(xintercept = -49:70,,...),
-    geom_hline(yintercept = seq(36,85.5, by = 0.5),...),
-    scale_x_continuous(sec.axis = sec_axis(~.x,
-                                           breaks = -49.5:69.5,
-                                           labels = paste(rep(LETTERS[1:12],each=10),0:9,sep=''),
-                                           guide = guide_axis(check.overlap = TRUE))),
-    scale_y_continuous(sec.axis = sec_axis(~.x,
-                                           breaks = seq(36.25, 85.25, by = 0.5),
-                                           labels = sprintf("%02d",c(1:99)),
-                                           guide = guide_axis(check.overlap = TRUE))),
-    coord_quickmap(xlim, ylim)  )}
-
+    geom_vline(xintercept = seq(-49, 70), ...),
+    geom_hline(yintercept = seq(36, 85.5, by = 0.5), ...),
+    scale_x_continuous(sec.axis = sec_axis(
+      ~ .x,
+      breaks = seq(-49.5, 69.5, by = 1),
+      labels = paste0(rep(LETTERS[1:12], each = 10), 0:9),
+      guide  = guide_axis(check.overlap = TRUE)
+    )),
+    scale_y_continuous(sec.axis = sec_axis(
+      ~ .x,
+      breaks = seq(36.25, 85.25, by = 0.5),
+      labels = sprintf("%02d", 1:99),
+      guide  = guide_axis(check.overlap = TRUE)
+    )),
+    coord_quickmap(xlim, ylim)
+  )
+}
 ```
 
-```{r, include = FALSE}
-# Find top 10 metiers according to the fishing days
-top20_metiers_fd <- CE_DF %>%
+```{r spatial-top20, include=FALSE}
+# Top 20 metiers by fishing days (CE)
+top20_fd <- CE_DF %>%
   group_by(CEmetier6) %>%
-  summarise(ofdTot=sum(CEoffFishDay)) %>%
-  arrange(desc(ofdTot)) %>%
-  top_n(20)
-top20_metiers_fd$Top20metiers <- "X"
-CE_DF <- left_join(CE_DF,top20_metiers_fd,by="CEmetier6")
-CE_DF$topMetiers <- ifelse(is.na(CE_DF$Top20metiers),"OTH",CE_DF$CEmetier6)
+  summarise(ofdTot = sum(CEoffFishDay, na.rm = TRUE), .groups = "drop") %>%
+  slice_max(order_by = ofdTot, n = 20) %>%
+  mutate(Top20metiers = "X")
+CE_DF <- left_join(CE_DF, top20_fd, by = "CEmetier6") %>%
+  mutate(topMetiers = if_else(is.na(Top20metiers), "OTH", CEmetier6))
 
-# Find top 20 metiers according to the landed value
-top20_metiers_lv <- CL_DF %>%
+# Top 20 metiers by landed value (CL)
+top20_lv <- CL_DF %>%
   group_by(CLmetier6) %>%
-  summarise(lvTot=sum(as.numeric(CLtotOffLanVal), na.rm = TRUE)) %>%
-  arrange(desc(lvTot)) %>%
-  top_n(20)
-top20_metiers_lv$Top20metiers <- "X"
-CL_DF <- left_join(CL_DF,top20_metiers_lv,by="CLmetier6")
-CL_DF$topMetiers <- ifelse(is.na(CL_DF$Top20metiers),"OTH",CL_DF$CLmetier6)
+  summarise(lvTot = sum(suppressWarnings(as.numeric(CLlanVal)), na.rm = TRUE),
+            .groups = "drop") %>%
+  slice_max(order_by = lvTot, n = 20) %>%
+  mutate(Top20metiers = "X")
+CL_DF <- left_join(CL_DF, top20_lv, by = "CLmetier6") %>%
+  mutate(topMetiers = if_else(is.na(Top20metiers), "OTH", CLmetier6))
 
-# For the ices rectangles centroid
-# Need to assign the same topMetiers between CL & CE 
-# CL weight as variable to determine top 20metiers
-
-top20_metiers_w <- CL_DF %>%
+# Top 20 metiers by official weight (used for spatial maps — shared CL/CE classification)
+top20_w <- CL_DF %>%
   group_by(CLmetier6) %>%
-  summarise(wTot=sum(CLoffWeight, na.rm = TRUE)) %>%
-  arrange(desc(wTot)) %>%
-  top_n(20)
-top20_metiers_w$Top20metiersW <- "X"
-CL_DF <- left_join(CL_DF,top20_metiers_w,by="CLmetier6")
-CL_DF$topMetiersW <- ifelse(is.na(CL_DF$Top20metiersW),"OTH",CL_DF$CLmetier6)
+  summarise(wTot = sum(CLoffWeight, na.rm = TRUE), .groups = "drop") %>%
+  slice_max(order_by = wTot, n = 20) %>%
+  mutate(Top20metiersW = "X")
 
-CE_DF <- left_join(CE_DF,top20_metiers_w,by=c("CEmetier6" = "CLmetier6"))
-CE_DF$topMetiersW <- ifelse(is.na(CE_DF$Top20metiersW),"OTH",CE_DF$CEmetier6)
+CL_DF <- left_join(CL_DF, top20_w, by = "CLmetier6") %>%
+  mutate(topMetiersW = if_else(is.na(Top20metiersW), "OTH", CLmetier6))
+
+CE_DF <- left_join(CE_DF, top20_w, by = c("CEmetier6" = "CLmetier6")) %>%
+  mutate(topMetiersW = if_else(is.na(Top20metiersW), "OTH", CEmetier6))
 ```
 
-## ICES rectangles and FAO Areas
+## ICES rectangles and FAO areas
 
-### CE 
+### CE
 
-Area and ICES rectangle in the CE data (CEarea, CEstatRect) set is compared with area/rectangle relationship ICES reference list. 
-The expected area related to the ICES rectangle is found in the column ICESAreaWithRectangle.
-Note that -9 is allowed as unknown ICES rectangle.
+Area and ICES rectangle in the CE data (`CEarea`, `CEstatRect`) are compared with the ICES reference list area/rectangle relationship. The expected area for each rectangle is shown in `ICESAreaWithRectangle`. Note that `-9` is allowed as unknown rectangle.
 
-```{r echo=FALSE, message=FALSE, warning = FALSE, results='asis'}
+```{r ce-rect-check, echo=FALSE, results='asis'}
 ICESrect$sq_check <- "correct"
 
-CE_sq <- CE_DF
-CE_sq <- CE_sq[CE_sq$CEstatRect != "-9",]
-CE_sq$t <- 1
-
-CE_sq1 <- CE_sq %>%
+# Vectorised replacement for the row-by-row loop (faster & cleaner)
+CE_sq <- CE_DF %>%
+  filter(CEstatRect != "-9") %>%
   group_by(CEvesFlagCou, CEstatRect, CEarea) %>%
-  summarise(t=sum(t))
+  summarise(t = n(), .groups = "drop") %>%
+  left_join(ICESrect, by = c("CEarea" = "Area", "CEstatRect" = "ICESNAME")) %>%
+  select(-any_of("Area_27"))
 
+CE_wrong <- CE_sq %>%
+  filter(is.na(sq_check)) %>%
+  select(CEvesFlagCou, CEstatRect, CEarea) %>%
+  left_join(select(ICESrect, ICESNAME, Area),
+            by = c("CEstatRect" = "ICESNAME")) %>%
+  distinct(CEvesFlagCou, CEstatRect, .keep_all = TRUE) %>%
+  rename(ICESAreaWithRectangle = Area)
 
-CE_sq2 <- CE_sq1 %>% 
-  left_join(ICESrect, by= c("CEarea" = "Area", "CEstatRect"="ICESNAME")) %>%
-  select(-Area_27)
+cat("\n\n**Overview of CE records with wrong/unexpected CEarea**\n\n")
+rdbes_dt(CE_wrong, caption = "CE records with wrong/unexpected area", filter = "top")
 
-CE_sq3 <- CE_sq2[is.na(CE_sq2$sq_check),]
+cat("\n\n**CEid records with wrong/unexpected CEarea**\n\n")
+cat("All CE records whose CEarea does not match the ICES reference list for that rectangle.\n\n")
 
-CE_sq4 <- subset(CE_sq3, select=c(CEvesFlagCou, CEstatRect, CEarea))
+# Vectorised semi_join replaces the row loop
+CE_DF_wrong_areas <- CE_DF %>%
+  semi_join(CE_wrong, by = c("CEvesFlagCou", "CEstatRect", "CEarea")) %>%
+  select(CEid, CEvesFlagCou, CEyear, CEmonth, CEstatRect, CEarea,
+         CEmetier6, CEvesLenCat, CEencrypVesIds)
 
-CE_sq5<- CE_sq4 %>% 
-  left_join(ICESrect[c("ICESNAME","Area")], by = c("CEstatRect"="ICESNAME"))%>% 
-  distinct(CEvesFlagCou, CEstatRect, .keep_all = TRUE)%>% 
-  rename("ICESAreaWithRectangle" = Area)
-  
-    cat("\n")
-    cat("\n")
-    cat("<b>Overview of CE data with wrong/unexpected CEarea</b>\n\n")
-
-DT::datatable(CE_sq5, filter = 'top', rownames = FALSE)    
-
-    cat("\n")
-    cat("\n")
-    cat("<b>CEid's with wrong/unexpected CEarea</b>\n\n")
-    cat("Based on the previous identified rectangles, an overview of all CEid for which the CEarea has been identified to not match with the corresponding area in the ICES reference list.\n\n")
-    
-CE_DF_wrong_areas <- data.frame()
-
-for (i in 1:seq_along(CE_sq5)) {
-  filtered_data <- CE_DF %>%
-    filter(CEvesFlagCou == CE_sq5$CEvesFlagCou[i] & 
-           CEstatRect == CE_sq5$CEstatRect[i] & 
-           CEarea == CE_sq5$CEarea[i]) %>%
-    select(CEid, CEvesFlagCou, CEyear, CEmonth, CEstatRect, CEarea, CEmetier6, CEvesLenCat, CEencrypVesIds)
-  
-  CE_DF_wrong_areas <- bind_rows(CE_DF_wrong_areas, filtered_data)
-}
-
-DT::datatable(CE_DF_wrong_areas, filter = 'top', rownames = FALSE)
+rdbes_dt(CE_DF_wrong_areas, caption = "CE records with incorrect area (full detail)", filter = "top")
 ```
 
 ### CL
 
-Area and ICES rectangle in the CE data (CLArea, CLstatRect) set is compared with area/rectangle relationship ICES reference list. 
-The expected area related to the ICES rectangle is found in the column ICESAreaWithRectangle.
-Note that -9 is allowed as unknown ICES rectangle.
+Area and ICES rectangle in the CL data (`CLarea`, `CLstatRect`) are compared with the ICES reference list. Note that `-9` is allowed as unknown rectangle.
 
-```{r echo=FALSE, message=FALSE, warning = FALSE, results='asis'}
+```{r cl-rect-check, echo=FALSE, results='asis'}
 ICESrect$sq_check <- "correct"
 
-CL_sq <- CL_DF
-CL_sq <- CL_sq[CL_sq$CLstatRect != "-9",]
-CL_sq$t <- 1
-
-CL_sq1 <- CL_sq %>%
+CL_sq <- CL_DF %>%
+  filter(CLstatRect != "-9") %>%
   group_by(CLvesFlagCou, CLstatRect, CLarea) %>%
-  summarise(t=sum(t))
+  summarise(t = n(), .groups = "drop") %>%
+  left_join(ICESrect, by = c("CLarea" = "Area", "CLstatRect" = "ICESNAME")) %>%
+  select(-any_of("Area_27"))
 
+CL_wrong <- CL_sq %>%
+  filter(is.na(sq_check)) %>%
+  select(CLvesFlagCou, CLstatRect, CLarea) %>%
+  left_join(select(ICESrect, ICESNAME, Area),
+            by = c("CLstatRect" = "ICESNAME")) %>%
+  distinct(CLvesFlagCou, CLstatRect, .keep_all = TRUE) %>%
+  rename(ICESAreaWithRectangle = Area)
 
-CL_sq2 <- CL_sq1 %>% 
-  left_join(ICESrect, by= c("CLarea" = "Area", "CLstatRect"="ICESNAME")) %>%
-  select(-Area_27)
+cat("\n\n**Overview of CL records with wrong/unexpected CLarea**\n\n")
+rdbes_dt(CL_wrong, caption = "CL records with wrong/unexpected area", filter = "top")
 
-CL_sq3 <- CL_sq2[is.na(CL_sq2$sq_check),]
+cat("\n\n**CLid records with wrong/unexpected CLarea**\n\n")
+cat("All CL records whose CLarea does not match the ICES reference list for that rectangle.\n\n")
 
-CL_sq4 <- subset(CL_sq3, select=c(CLvesFlagCou, CLstatRect, CLarea))
+CL_DF_wrong_areas <- CL_DF %>%
+  semi_join(CL_wrong, by = c("CLvesFlagCou", "CLstatRect", "CLarea")) %>%
+  select(CLid, CLvesFlagCou, CLyear, CLmonth, CLstatRect, CLarea,
+         CLmetier6, CLvesLenCat, CLencrypVesIds)
 
-CL_sq5<- CL_sq4 %>% 
-  left_join(ICESrect[c("ICESNAME","Area")], by = c("CLstatRect"="ICESNAME"))%>% 
-  distinct(CLvesFlagCou, CLstatRect, .keep_all = TRUE)%>% 
-  rename("ICESAreaWithRectangle" = Area)
-  
-    cat("\n")
-    cat("\n")
-    cat("<b>Overview of CL data with wrong/unexpected CLarea</b>\n\n")
-
-    DT::datatable(CL_sq5, filter = 'top', rownames = FALSE)   
-
-    cat("\n")
-    cat("\n")
-    cat("<b>CLid's with wrong/unexpected CLarea</b>\n\n")
-    cat("Based on the previous identified rectangles, an overview of all CLid for which the CLArea has been identified to not match with the corresponding area in the ICES reference list.\n\n")
-    
-CL_DF_wrong_areas <- data.frame()
-
-for (i in 1:seq_along(CL_sq5)) {
-  filtered_data <- CL_DF %>%
-    filter(CLvesFlagCou == CL_sq5$CLvesFlagCou[i] & 
-           CLstatRect == CL_sq5$CLstatRect[i] & 
-           CLarea == CL_sq5$CLarea[i]) %>%
-    select(CLid, CLvesFlagCou, CLyear, CLmonth, CLstatRect, CLarea, CLmetier6, CLvesLenCat, CLencrypVesIds)
-  
-  CL_DF_wrong_areas <- bind_rows(CL_DF_wrong_areas, filtered_data)
-}
-
-DT::datatable(CL_DF_wrong_areas, filter = 'top', rownames = FALSE)
-
+rdbes_dt(CL_DF_wrong_areas, caption = "CL records with incorrect area (full detail)", filter = "top")
 ```
 
 ## ICES rectangle centroids (CL and CE) {.tabset}
 
-CE and CL data points are plotted to the ICES rectangle centroids. A map third map, shows CL data points for which no corresponding CE data points has been submitted. Note that -9 is allowed as unknown ICES rectangle and therefore could lead to such discrepancy between CL and CE spatial data.
+CE and CL data points are plotted to ICES rectangle centroids. A third map shows CL records with no corresponding CE record. Note: `-9` (unknown rectangle) may legitimately produce such discrepancies.
 
-The top 20 metiers are determined based on the CL official weight. The corresponding metiers are then filtered from the CE table and matched with the CL. 
-
-```{r  mapCE, include = FALSE,  echo=FALSE, message=FALSE, warning = FALSE}
-# Load world data
+```{r spatial-maps, include=FALSE, error=TRUE}
 world <- ne_countries(scale = "medium", returnclass = "sf")
 world <- st_set_crs(world, 4326)
 
-# Create empty lists to store plots and filtered CL data
-map_combined <- list()
-CL_without_CE <- list()
+map_combined    <- list()
+CL_without_CE   <- list()
+unique_countries <- sort(unique(CE_DF$CEvesFlagCou))
 
-# Iterate over unique countries
-unique_countries <- unique(CE_DF$CEvesFlagCou)
+# Helper: add lon/lat centroids by looking up rectangle codes in the
+# ICESrect reference table (already loaded in the main Rmd).
+# Falls back to mapplots::ices.rect() if the column lookup fails.
+# Always returns df with lon/lat columns; unrecognised codes get NA.
+.add_lonlat <- function(df, rect_col) {
+  if (nrow(df) == 0) {
+    df$lon <- numeric(0)
+    df$lat <- numeric(0)
+    return(df)
+  }
+  df$lon <- NA_real_
+  df$lat <- NA_real_
 
-for(country in sort(unique_countries)){
-  
-  # Filter CE and CL data for the current country
-  CE_subset_data <- CE_DF %>%
-    filter(CEvesFlagCou == country, CEstatRect != '-9') %>%
+  # ICESRectAreas.csv has columns: ICESNAME, Area, MidLon, MidLat
+  rect_id_col <- intersect(c("ICESNAME", "ICESname", "icesname",
+                              "Rectangle", "StatRect", "Name"),
+                           names(ICESrect))[1]
+  lon_col     <- intersect(c("MidLon", "midlon", "Lon", "lon", "LON"),
+                           names(ICESrect))[1]
+  lat_col     <- intersect(c("MidLat", "midlat", "Lat", "lat", "LAT"),
+                           names(ICESrect))[1]
+
+  if (!is.na(rect_id_col) && !is.na(lon_col) && !is.na(lat_col)) {
+    # Primary path: direct merge against ICESrect
+    lookup <- ICESrect[, c(rect_id_col, lon_col, lat_col)]
+    names(lookup) <- c("rect_key", "lon_new", "lat_new")
+    merged <- merge(
+      data.frame(rect_key = df[[rect_col]],
+                 row_idx  = seq_len(nrow(df)),
+                 stringsAsFactors = FALSE),
+      lookup,
+      by = "rect_key", all.x = TRUE, sort = FALSE
+    )
+    merged <- merged[order(merged$row_idx), ]
+    df$lon <- merged$lon_new
+    df$lat <- merged$lat_new
+
+  } else {
+    # Fallback: mapplots::ices.rect() — wrap each rectangle individually
+    # to avoid length-mismatch when it doesn't vectorise properly
+    message(".add_lonlat: ICESrect columns not found (",
+            paste(names(ICESrect), collapse = ", "),
+            "). Falling back to mapplots::ices.rect().")
+    rects <- df[[rect_col]]
+    lons  <- vapply(rects, function(r) {
+      tryCatch(mapplots::ices.rect(r)$lon[1], error = function(e) NA_real_)
+    }, numeric(1))
+    lats  <- vapply(rects, function(r) {
+      tryCatch(mapplots::ices.rect(r)$lat[1], error = function(e) NA_real_)
+    }, numeric(1))
+    df$lon <- lons
+    df$lat <- lats
+  }
+
+  df
+}
+
+for (country in unique_countries) {
+
+  CE_sub <- CE_DF %>%
+    filter(CEvesFlagCou == country, CEstatRect != "-9") %>%
     distinct(CEstatRect, CEvesFlagCou, topMetiersW) %>%
-    mutate(lon = ices.rect(CEstatRect)$lon,
-           lat = ices.rect(CEstatRect)$lat)
-  
-  CL_subset_data <- CL_DF %>%
-    filter(CLvesFlagCou == country, CLstatRect != '-9') %>%
-    distinct(CLstatRect, CLvesFlagCou, topMetiersW) %>%
-    mutate(lon = ices.rect(CLstatRect)$lon,
-           lat = ices.rect(CLstatRect)$lat)
-  
-  # Extract min and max longitude and latitude for the current country
-  min.lon <- min(CE_subset_data$lon, na.rm = TRUE)
-  max.lon <- max(CE_subset_data$lon, na.rm = TRUE)
-  min.lat <- min(CE_subset_data$lat, na.rm = TRUE)
-  max.lat <- max(CE_subset_data$lat, na.rm = TRUE)
-  
-  # Create sublist for the current country in CL_without_CE list
-  CL_without_CE[[country]] <- list()
-  
-  # Iterate over unique values of topMetiers for the current country
-  for(topMetier in sort(unique(CE_subset_data$topMetiersW))){
-    
-    # Subset CE and CL data for the current topMetier
-    CE_subset_data_topMetier <- CE_subset_data %>%
-      filter(topMetiersW == topMetier)
-    
-    CL_subset_data_topMetier <- CL_subset_data %>%
-      filter(topMetiersW == topMetier)
-    
-    # Filter CL data to only contain cases where CLstatRect are in the CL_only_rectangles
-    CL_only_rectangles <- CL_subset_data_topMetier %>%
-      anti_join(CE_subset_data_topMetier, by = c("lon", "lat")) %>%
-      mutate(label = "CL Only")
+    .add_lonlat("CEstatRect")
 
-    # Store the filtered CL data in the sublist for the current country and gear
+  CL_sub <- CL_DF %>%
+    filter(CLvesFlagCou == country, CLstatRect != "-9") %>%
+    distinct(CLstatRect, CLvesFlagCou, topMetiersW) %>%
+    .add_lonlat("CLstatRect")
+
+  # Skip country if no CE rectangles resolved to valid coordinates
+  CE_valid <- filter(CE_sub, !is.na(lon) & !is.na(lat))
+  if (nrow(CE_valid) == 0) next
+
+  min.lon <- min(CE_valid$lon, na.rm = TRUE)
+  max.lon <- max(CE_valid$lon, na.rm = TRUE)
+  min.lat <- min(CE_valid$lat, na.rm = TRUE)
+  max.lat <- max(CE_valid$lat, na.rm = TRUE)
+
+  CL_without_CE[[country]] <- list()
+  map_combined[[country]]  <- list()
+
+  for (topMetier in sort(unique(CE_valid$topMetiersW))) {
+
+    CE_tm <- filter(CE_sub, topMetiersW == topMetier, !is.na(lon), !is.na(lat))
+    CL_tm <- filter(CL_sub, topMetiersW == topMetier, !is.na(lon), !is.na(lat))
+
+    # Guard: if either subset is empty after coordinate filtering, skip
+    if (nrow(CE_tm) == 0) next
+
+    # Ensure both frames have lon/lat before anti_join (they always will after
+    # .add_lonlat, but add zero-row fallback to be safe)
+    if (nrow(CL_tm) == 0) {
+      CL_only <- CL_tm %>% mutate(label = "CL Only")
+    } else {
+      CL_only <- anti_join(CL_tm, CE_tm, by = c("lon", "lat")) %>%
+        mutate(label = "CL Only")
+    }
+
     CL_without_CE[[country]][[topMetier]] <- CL_DF %>%
       filter(CLvesFlagCou == country,
-             CLstatRect != '-9',
-             topMetiersW == topMetier) %>% 
-      semi_join(CL_only_rectangles, by = c("CLstatRect"))%>%
-      select(CLid, CLvesFlagCou, CLyear, CLmonth, CLstatRect, CLmetier6, CLvesLenCat, CLencrypVesIds)%>%
+             CLstatRect   != "-9",
+             topMetiersW  == topMetier) %>%
+      semi_join(CL_only, by = "CLstatRect") %>%
+      select(CLid, CLvesFlagCou, CLyear, CLmonth, CLstatRect,
+             CLmetier6, CLvesLenCat, CLencrypVesIds) %>%
       arrange(CLstatRect)
-    
-    # Create CE plot for the current topMetier
-    CE_plot <- ggplot() +
-      theme_bw() +
-      geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat), linetype = "dotted", colour = "grey30", linewidth = 0.1) +
-      geom_sf(data = world) +
-      geom_point(data = CE_subset_data_topMetier, aes(lon, lat), size = 2, colour = "red") +
-      coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      ggtitle("CE")
-    
-    # Create CL plot for the current topMetier
-    CL_plot <- ggplot() +
-      theme_bw() +
-      geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat), linetype = "dotted", colour = "grey30", linewidth = 0.1) +
-      geom_sf(data = world) +
-      geom_point(data = CL_subset_data_topMetier, aes(lon, lat), size = 2, colour = "red") +
-      coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      ggtitle("CL")
-    
-    # Create plot for rectangles with CL data but no CE data
-    CL_only_plot <- ggplot() +
-      theme_bw() +
-      geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat), linetype = "dotted", colour = "grey30", linewidth = 0.1) +
-      geom_sf(data = world) +
-      geom_point(data = CL_only_rectangles, aes(lon, lat), size = 2, colour = "red") +
-      coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
-      xlab("Longitude") +
-      ylab("Latitude") +
-      ggtitle("CL without CE")
-    
-    # Combine CE, CL, and CL only plots
-    combined_plot <- ggarrange(CE_plot, CL_plot, CL_only_plot, nrow = 1, ncol = 3)
-    
-    # Store the combined plot in a list, organized by country and gear
-    map_combined[[country]][[topMetier]] <- combined_plot
+
+    make_map <- function(pts, title_str) {
+      ggplot() +
+        rdbes_theme() +
+        geom_ices_squares(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat),
+                          linetype = "dotted", colour = "grey30", linewidth = 0.1) +
+        geom_sf(data = world) +
+        geom_point(data = pts, aes(lon, lat), size = 2, colour = "#e63946") +
+        coord_sf(xlim = c(min.lon, max.lon), ylim = c(min.lat, max.lat)) +
+        xlab("Longitude") + ylab("Latitude") +
+        ggtitle(title_str)
+    }
+
+    map_combined[[country]][[topMetier]] <- ggarrange(
+      make_map(CE_tm,   "CE"),
+      make_map(CL_tm,   "CL"),
+      make_map(CL_only, "CL without CE"),
+      nrow = 1, ncol = 3
+    )
   }
 }
 ```
 
-```{r, results = "asis", echo = FALSE, warning = FALSE, fig.height=5, fig.width=15}
-# Loop over unique countries
-for(country in unique_countries) {
-  # Output country tab
-  catHeader(paste0(country," {.tabset}"), 3)
+```{r spatial-maps-output, results="asis", echo=FALSE, warning=FALSE, fig.height=5, fig.width=15}
+for (country in names(map_combined)) {
+  catHeader(paste0(country, " {.tabset}"), 3)
 
-  # Loop over gears for the current country
-  for(gear in names(map_combined[[country]])) {
-    # Output gear tab
+  for (gear in names(map_combined[[country]])) {
     catHeader(gear, 4)
     cat("\n")
-    
-    # Output map for the current gear and country
     print(map_combined[[country]][[gear]])
-    
+    cat("\n\n**Overview of CL records without CE**\n\n")
+    cat("CL records for which no matching CE record exists (landings without effort).\n\n")
+    print(htmltools::tagList(
+      rdbes_dt(CL_without_CE[[country]][[gear]], caption = "CL records without CE", filter = "top")
+    ))
     cat("\n")
-    cat("\n")
-    cat("<b>Overview of CL data without CE</b>\n\n")
-    cat("The following table shows an overview of all CLid for which no CEid exists (landings without effort).\n\n")
-    
-    # Output table for the current gear and country using knitr's results='asis'
-    print(htmltools::tagList(DT::datatable(CL_without_CE[[country]][[gear]], filter = 'top', rownames = FALSE)))
-  #   kable(CL_without_CE[[country]][[gear]], "html", caption = NULL) %>%
-  #     kable_styling(bootstrap_options = c("striped", "hover", "condensed", "responsive"), full_width = TRUE) %>%
-  #     as.character() %>%
-  #     cat()
   }
 }
 ```

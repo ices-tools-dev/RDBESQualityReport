@@ -1,329 +1,396 @@
 ---
-# date: "`r format(Sys.time(), '%d %B, %Y')`"
+title: "RDBES National Quality Report"
 output: 
   html_document:
+    self_contained: true
     toc: true
     toc_depth: 4
     number_sections: true
-    toc_float: true
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    theme: flatly
+    highlight: kate
 params:
-  RDBESfile: RDBESfile
-  eurostat: eurostat
-  prelcatchstat: prelcatchstat
-  prelcatchFile: prelcatchFile
-  fleetRegister: fleetRegister
-  fleetRegisterFile: fleetRegisterFile
+  RDBESfile:        !r c("", "")
+  eurostat:         FALSE
+  prelcatchstat:    FALSE
+  prelcatchFile:    ""
+  fleetRegister:    FALSE
+  fleetRegisterFile: ""
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, error = FALSE, fig.height = 10, fig.width = 14)
-options(scipen=999, viewer=NULL)
+
+knitr::opts_chunk$set(
+  echo       = FALSE,
+  warning    = FALSE,
+  message    = FALSE,
+  error      = FALSE,
+  fig.height = 10,
+  fig.width  = 14,
+  fig.path   = file.path(tempdir(), "rdbes-figures", "/")
+)
+options(scipen = 999)
+options(viewer = function(...) invisible(NULL))
 ```
 
-```{r}
-# Packages 
-# Installs missing packages automatically 
-list.of.packages <- c("icesVocab", "ggplot2", "tidyverse", "eurostat", "DT", "rnaturalearth", "rnaturalearthdata", "sf", "mapplots", "kableExtra", "ggpubr", "remotes", "htmltools", "knitr", "rstudioapi", "ggalluvial")
-new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
-if(length(new.packages)) install.packages(new.packages)
+```{css report-style, echo=FALSE}
+/* ── Typography ─────────────────────────────────────────────── */
+body        { font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+              font-size: 14px; color: #2c2c2c; line-height: 1.6; }
+h1, h2, h3  { font-weight: 600; color: #1a3a4a; }
+h1          { border-bottom: 2px solid #2a9d8f; padding-bottom: 6px; }
+h2          { border-bottom: 1px solid #dee2e6; padding-bottom: 4px; }
+p           { color: #3d3d3d; }
 
-# if(!"RDBEScore" %in% installed.packages()[,"Package"]){
-#   remotes::install_github("ices-tools-dev/RDBEScore", build_vignettes = TRUE)
-# }
+/* ── TOC ─────────────────────────────────────────────────────── */
+#TOC        { background: #f8fafc; border: 1px solid #e2e8f0;
+              border-radius: 6px; padding: 12px 16px; font-size: 13px; }
+#TOC a      { color: #2a9d8f; }
+#TOC a:hover{ color: #1a6b61; text-decoration: underline; }
 
-# Loads packages 
-library(icesVocab)
-library(tidyverse, quietly = TRUE)
-library(eurostat)
-library(DT)
-library(rnaturalearth)
-library(rnaturalearthdata)
-library(sf)
-library(knitr)
-library(mapplots)
-library(kableExtra)
-library(ggpubr)
-# library(RDBEScore)
-library(htmltools)
-library(ggalluvial)
-library(ggplot2)
+/* ── Tables (DT) ─────────────────────────────────────────────── */
+.dataTables_wrapper { font-size: 13px; margin-bottom: 1.5em; }
+table.dataTable thead th {
+  background: #1a3a4a; color: #ffffff; font-weight: 600;
+  border-bottom: 2px solid #2a9d8f !important; }
+table.dataTable tbody tr:hover { background: #eef7f6 !important; }
+.dt-button   { background: #2a9d8f !important; color: #fff !important;
+               border: none !important; border-radius: 4px !important;
+               padding: 4px 10px !important; font-size: 12px !important; }
+.dt-button:hover { background: #21867a !important; }
 
+/* ── Callout box for intro text ──────────────────────────────── */
+.callout     { background: #eef7f6; border-left: 4px solid #2a9d8f;
+               padding: 10px 16px; border-radius: 0 6px 6px 0;
+               margin-bottom: 1em; font-size: 13px; color: #2c4a48; }
 ```
 
+```{r packages, include=FALSE}
+# Install missing packages automatically
+required_packages <- c(
+  "icesVocab", "tidyverse", "eurostat", "DT",
+  "rnaturalearth", "rnaturalearthdata", "sf", "mapplots",
+  "ggpubr", "remotes", "htmltools",
+  "knitr", "rstudioapi", "ggalluvial", "RColorBrewer", "viridis"
+)
+new_packages <- required_packages[!(required_packages %in% installed.packages()[, "Package"])]
+if (length(new_packages)) install.packages(new_packages, quiet = TRUE)
 
-```{r}
-# Functions 
-source(paste0(dirname(rstudioapi::getActiveDocumentContext()$path), "/utils/utils.R"))
+suppressPackageStartupMessages({
+  library(icesVocab)
+  library(tidyverse)
+  library(eurostat)
+  library(DT)
+  library(rnaturalearth)
+  library(rnaturalearthdata)
+  library(sf)
+  library(knitr)
+  library(mapplots)
+  library(ggpubr)
+  library(htmltools)
+  library(ggalluvial)
+  library(RColorBrewer)
+})
 ```
 
-```{r}
-# Read auxiliary files 
-# RCG areas 
-url <- "https://raw.githubusercontent.com/ices-eg/RCGs/master/Metiers/Reference_lists/AreaRegionLookup.csv"
-Area <- read.csv(url, header = TRUE)
-### Fix the extra space in rcg region code
-Area <- mutate(Area, Code = ifelse(Code %in% "NSEA                                    " , "NSEA",
-                             ifelse(Code %in% "NAtl                                      ", "NAtl", Code))) %>%
-  select(AreaCode, Code)
-
-#Read the rectangle list from the repository 
-url <- "https://github.com/ices-tools-dev/RDBES/raw/master/QC-scripts/RectangleList/ICESRectAreas.csv"
-ICESrect <- read.csv(url, header = TRUE)
-
+```{r load-utils, include=FALSE}
+# Source utility functions (path relative to this .Rmd file)
+source(file.path(dirname(knitr::current_input(dir = TRUE)), "..", "utils", "utils.R"))
 ```
 
+```{r shared-style, include=FALSE}
+# ---------------------------------------------------------------------------
+# Shared ggplot theme and colour palette used by every plot in this report
+# ---------------------------------------------------------------------------
+rdbes_theme <- function(...) {
+  theme_minimal(base_size = 12, base_family = "sans") +
+    theme(
+      axis.text.x      = element_text(angle = 45, hjust = 1, colour = "grey30"),
+      axis.text.y      = element_text(colour = "grey30"),
+      axis.title       = element_text(size = 11, colour = "grey20"),
+      axis.line        = element_line(colour = "grey80"),
+      legend.title     = element_text(size = 10, face = "bold"),
+      legend.text      = element_text(size = 9),
+      legend.key.size  = unit(0.7, "cm"),
+      legend.position  = "right",
+      strip.text       = element_text(size = 10, face = "bold", colour = "grey20"),
+      strip.background = element_rect(fill = "#eef2f7", colour = NA),
+      panel.grid.major = element_line(colour = "grey92", linewidth = 0.4),
+      panel.grid.minor = element_blank(),
+      panel.border     = element_blank(),
+      plot.title       = element_text(size = 12, face = "bold", colour = "grey15", hjust = 0),
+      plot.subtitle    = element_text(size = 10, colour = "grey40", hjust = 0),
+      plot.margin      = margin(8, 8, 8, 8),
+      ...
+    )
+}
 
+# Discrete colour palettes — consistent across all plots
+RDBES_PALETTE <- c("#2a9d8f", "#e76f51", "#457b9d", "#e9c46a",
+                   "#264653", "#f4a261", "#a8dadc", "#e63946")
 
-```{r}
-# Read RDBES CL, CE files 
-# Needs to be updated
-# df <- createRDBESDataObject(input = params$RDBESfile) 
-# For now use this 
-df <- read.rdbes(params$RDBESfile)
+RDBES_FILL <- scale_fill_manual(values = RDBES_PALETTE)
+RDBES_COL  <- scale_colour_manual(values = RDBES_PALETTE)
 
-
-CL <- as.data.frame(df[1])
-CE <- as.data.frame(df[2])
-
-# # Change class of some fields for plotting 
-# CL <- rdbes.fc(CL)
-# # Quick fix of CE col names - inconsistency between CE-CL lowercase and upper case for some fields 
-# names(CE)[names(CE) == 'CEMonth'] <- 'CEmonth'
-# names(CE)[names(CE) == 'CEArea'] <- 'CEarea'
-# CE <- rdbes.fc(CE)
-
-
-## Get metier lvl 4 
-CL <- mutate(CL, CLmetier4 = str_extract(CLmetier6, "[^_]+"))
-CE <- mutate(CE, CEmetier4 = str_extract(CEmetier6, "[^_]+"))
-
-## Get metier lvl 5 
-CL <- mutate(CL, CLmetier5 = str_extract(CLmetier6,  "[^_]*_[^_]*"))
-CE <- mutate(CE, CEmetier5 = str_extract(CEmetier6,  "[^_]*_[^_]*"))
-```
-
-```{r}
-clY <- sort(unique(CL$CLyear))
-ceY <- sort(unique(CE$CEyear))
-# TODO add consistency checks between CL and CE and add warning for the comparison of both if there are
-# no matching years 
-
-if(all(clY == ceY) & length(unique(clY)) > 1){
-  titleR <- paste("National quality report for years", paste(clY, collapse = ", "))
-}else{
-  titleR <- paste("National quality report for year ", clY)
+# ---------------------------------------------------------------------------
+# Shared DT helper — all tables get the same look + Excel export button
+# ---------------------------------------------------------------------------
+rdbes_dt <- function(data, caption = NULL, filter = "none", ...) {
+  DT::datatable(
+    data,
+    caption    = caption,
+    filter     = filter,
+    rownames   = FALSE,
+    extensions = "Buttons",
+    class      = "stripe hover compact",
+    options    = list(
+      dom        = "Blfrtip",
+      buttons    = list(
+        list(extend = "excel",
+             text   = "<i class='fas fa-file-excel'></i> Excel",
+             title  = if (!is.null(caption)) caption else "RDBES export")
+      ),
+      lengthMenu = list(c(10, 25, 50, -1), c("10", "25", "50", "All")),
+      pageLength = 10,
+      scrollX    = TRUE
+    ),
+    ...
+  )
 }
 ```
 
----
-title: `r titleR`
----
+```{r load-aux-data, include=FALSE}
+# RCG area lookup
+rcg_url   <- "https://raw.githubusercontent.com/ices-eg/RCGs/master/Metiers/Reference_lists/AreaRegionLookup.csv"
+Area <- read.csv(rcg_url, header = TRUE, stringsAsFactors = FALSE)
+
+# Fix known trailing-whitespace issue in RCG region codes (issue observed upstream)
+Area <- Area %>%
+  mutate(Code = trimws(Code)) %>%
+  select(AreaCode, Code)
+
+# ICES rectangle reference list
+rect_url  <- "https://github.com/ices-tools-dev/RDBES/raw/master/QC-scripts/RectangleList/ICESRectAreas.csv"
+ICESrect  <- read.csv(rect_url, header = TRUE, stringsAsFactors = FALSE)
+```
+
+```{r load-rdbes, include=FALSE}
+# Read RDBES CL and CE tables
+# read.rdbes() returns a named list: list(CL = ..., CE = ...)
+df <- read.rdbes(params$RDBESfile)
+CL <- df$CL
+CE <- df$CE
+
+# Derive metier levels 4 and 5 from metier level 6
+CL <- CL %>% mutate(
+  CLmetier4 = str_extract(CLmetier6, "[^_]+"),
+  CLmetier5 = str_extract(CLmetier6, "[^_]*_[^_]*")
+)
+CE <- CE %>% mutate(
+  CEmetier4 = str_extract(CEmetier6, "[^_]+"),
+  CEmetier5 = str_extract(CEmetier6, "[^_]*_[^_]*")
+)
+```
+
+```{r report-title, include=FALSE}
+clY <- sort(unique(CL$CLyear))
+ceY <- sort(unique(CE$CEyear))
+
+if (length(clY) > 1 && identical(clY, ceY)) {
+  titleR <- paste("National quality report for years", paste(clY, collapse = ", "))
+} else {
+  titleR <- paste("National quality report for year", paste(clY, collapse = ", "))
+}
+
+# Update the HTML <title> tag dynamically from the data
+rmarkdown::output_metadata$set(title = titleR)
+```
 
 
-
-```{r}
-# Processing 
-# Get species scientific name from aphiaID
+```{r species-lookup, include=FALSE}
+# Fetch species scientific names via AphiaID
 ScName <- getCodeList("SpecWorms") %>%
   select(Description, Key) %>%
-  rename(LatinName = Description) %>%
-  mutate(Key = as.numeric(Key))
-CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key")) 
+  rename(LatinName = Description)
+
+# CLspecCode is integer from the CSV; Key from icesVocab is character — align before joining
+CL$CLspecCode <- as.character(CL$CLspecCode)
+
+CL <- left_join(CL, ScName, by = c("CLspecCode" = "Key"))
 ```
 
-```{r}
-# Transform kg to t 
-CL$CLoffWeight <- round(CL$CLoffWeight/1000, digits = 3)
-CL$CLsciWeight <- round(CL$CLsciWeight/1000, digits = 3)
+```{r weight-kg-to-t, include=FALSE}
+# Convert weights from kg to tonnes
+CL <- CL %>%
+  mutate(
+    CLoffWeight = round(CLoffWeight / 1000, digits = 0),
+    CLsciWeight = round(CLsciWeight / 1000, digits = 0)
+  )
 ```
 
+<div class="callout">
+This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its primary purpose is to serve as a resource for data submitters, helping them identify and correct potential errors before the submission deadline. By utilising this script, data submitters can improve the accuracy and completeness of their data, thereby improving the overall quality and reliability of the submitted information.
+</div>
 
-<!-- # ```{r} -->
-<!-- # # For testing -->
-<!-- # CL$CLcatchCat[1:50] <- "BMS" -->
-<!-- # CL$CLcatchCat[51:100] <- "RegDis" -->
-<!-- # # CL$CLregDisCategory <- "Deminimis" -->
-<!-- #  -->
-<!-- # ``` -->
+# Summary
 
-This report has been developed under the WGRBDES-GOV ISSG Data Quality. Its primary purpose is to serve as a resource for data submitters, helping them identify and correct potential errors before the submission deadline. By utilizing this script, data submitters can improve the accuracy and completeness of their data, thereby improving the overall quality and reliability of the submitted information. The output shown herein is designed to assist users in reviewing their data, facilitating a smoother and more efficient submission process. 
+The following tables show summary values between the years. <span style="color:red">Differences exceeding 30% relative to the most recent year are highlighted in red.</span>
 
-# Summary 
-
-The following tables show summary values between the years. <span style="color:red">If the difference between the years when compared to the most recent year exceeds 30% they are highlighted red. </span> 
-
-```{r}
-# Number of records 
+```{r summary-records}
+# Number of records per year
 CLr <- CL %>%
   group_by(CLyear) %>%
   count() %>%
   mutate(Dataset = "CL") %>%
   rename(Year = CLyear)
+
 CEr <- CE %>%
   group_by(CEyear) %>%
   count() %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
 
-tabN1 <- rbind(CLr, CEr)  %>%
+tabN1 <- bind_rows(CLr, CEr) %>%
   group_by(Dataset) %>%
-  mutate(Pos =  (0.3 * n[which.max(Year)] + n[which.max(Year)]),
-         Neg = abs(0.3 * n[which.max(Year)] - n[which.max(Year)]),
-         n = cell_spec(n, color = ifelse(n <= Pos & n >= Neg, "black", "red")))
+  mutate(
+    ref   = n[which.max(Year)],
+    inRange = n <= ref * 1.3 & n >= ref * 0.7
+  ) %>%
+  select(Year, n, inRange, Dataset)
 
-tabN2 <- tabN1 %>%
-  select(Year, n, Dataset) %>%
-  spread(Year, n) 
+tabN_wide  <- tabN1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = n)
+tabN_flags <- tabN1 %>% select(-n)       %>% pivot_wider(names_from = Year, values_from = inRange)
+year_cols  <- setdiff(names(tabN_wide), "Dataset")
 
+.flag_dt <- function(wide, flags, caption) {
+  dt <- rdbes_dt(wide, caption = caption)
+  for (yr in intersect(year_cols, names(wide))) {
+    ok  <- flags[[yr]]
+    vals <- wide[[yr]]
+    dt <- DT::formatStyle(dt, yr,
+      backgroundColor = DT::styleEqual(vals, ifelse(ok, "transparent", "#ffe8e8")),
+      color           = DT::styleEqual(vals, ifelse(ok, "inherit",     "#c0392b")),
+      fontWeight      = DT::styleEqual(vals, ifelse(ok, "normal",      "bold")))
+  }
+  dt
+}
 
-kbl(tabN2, escape = F, caption = "Number of records in the CE and CL tables by year", align = rep("c", ncol(tabN2))) %>%
-  kable_styling(bootstrap_options = "striped" )
-
+.flag_dt(tabN_wide, tabN_flags, "Number of records in the CE and CL tables by year")
 ```
 
-
-```{r}
-# Numbers of metier lvl 6 
+```{r summary-metiers}
+# Number of unique metier level 6 per year
 CLm <- CL %>%
   group_by(CLyear) %>%
-  summarise(Nmet = length(unique(CLmetier6))) %>%
+  summarise(Nmet = n_distinct(CLmetier6), .groups = "drop") %>%
   mutate(Dataset = "CL") %>%
   rename(Year = CLyear)
+
 CEm <- CE %>%
   group_by(CEyear) %>%
-  summarise(Nmet = length(unique(CEmetier6))) %>%
+  summarise(Nmet = n_distinct(CEmetier6), .groups = "drop") %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
 
-tabm1 <- rbind(CLm, CEm) %>%
+tabm1 <- bind_rows(CLm, CEm) %>%
   group_by(Dataset) %>%
-  mutate(Pos =  (0.3 * Nmet[which.max(Year)] + Nmet[which.max(Year)]),
-         Neg = abs(0.3 * Nmet[which.max(Year)] - Nmet[which.max(Year)]),
-         Nmet = cell_spec(Nmet, color = ifelse(Nmet <= Pos & Nmet >= Neg, "black", "red")))
+  mutate(
+    ref     = Nmet[which.max(Year)],
+    inRange = Nmet <= ref * 1.3 & Nmet >= ref * 0.7
+  ) %>%
+  select(Year, Nmet, inRange, Dataset)
 
-tabm2 <- tabm1 %>%
-  select(Year, Nmet, Dataset) %>%
-  spread(Year, Nmet) 
+tabm_wide  <- tabm1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = Nmet)
+tabm_flags <- tabm1 %>% select(-Nmet)    %>% pivot_wider(names_from = Year, values_from = inRange)
 
-
-kbl(tabm2, escape = F, caption = "Number of unique metiers level 6 in the CE and CL tables by year", align = rep("c", ncol(tabm2))) %>%
-  kable_styling(bootstrap_options = "striped")
-
-
+.flag_dt(tabm_wide, tabm_flags, "Number of unique metiers level 6 in the CE and CL tables by year")
 ```
 
-```{r}
-# Number of unique vessels by year 
-
-CLv <- select(CL, CLyear, CLencrypVesIds) %>%
+```{r summary-vessels}
+# Number of unique encrypted vessel IDs per year
+CLv <- CL %>%
+  select(CLyear, CLencrypVesIds) %>%
   distinct() %>%
-  separate_rows(CLencrypVesIds, convert = TRUE) %>%
+  separate_rows(CLencrypVesIds, convert = FALSE) %>%
   distinct() %>%
   group_by(CLyear) %>%
-  summarise(NumberOfUniqueVessels = length(unique(CLencrypVesIds))) %>%
+  summarise(NumberOfUniqueVessels = n_distinct(CLencrypVesIds), .groups = "drop") %>%
   mutate(Dataset = "CL") %>%
   rename(Year = CLyear)
-CEv <- select(CE, CEyear, CEencrypVesIds) %>%
+
+CEv <- CE %>%
+  select(CEyear, CEencrypVesIds) %>%
   distinct() %>%
-  separate_rows(CEencrypVesIds, convert = TRUE) %>%
-  distinct()%>%
+  separate_rows(CEencrypVesIds, convert = FALSE) %>%
+  distinct() %>%
   group_by(CEyear) %>%
-  summarise(NumberOfUniqueVessels = length(unique(CEencrypVesIds)))%>%
+  summarise(NumberOfUniqueVessels = n_distinct(CEencrypVesIds), .groups = "drop") %>%
   mutate(Dataset = "CE") %>%
   rename(Year = CEyear)
 
-tabv1 <- rbind(CLv, CEv) %>%
+tabv1 <- bind_rows(CLv, CEv) %>%
   group_by(Dataset) %>%
-  mutate(Pos =  (0.3 * NumberOfUniqueVessels[which.max(Year)] + NumberOfUniqueVessels[which.max(Year)]),
-         Neg = abs(0.3 * NumberOfUniqueVessels[which.max(Year)] - NumberOfUniqueVessels[which.max(Year)]),
-         Nmet = cell_spec(NumberOfUniqueVessels, color = ifelse(NumberOfUniqueVessels <= Pos & NumberOfUniqueVessels >= Neg, "black", "red")))
+  mutate(
+    ref     = NumberOfUniqueVessels[which.max(Year)],
+    inRange = NumberOfUniqueVessels <= ref * 1.3 & NumberOfUniqueVessels >= ref * 0.7
+  ) %>%
+  select(Year, NumberOfUniqueVessels, inRange, Dataset) %>%
+  rename(Nves = NumberOfUniqueVessels)
 
-tabv2 <- tabv1 %>%
-  select(Year, NumberOfUniqueVessels, Dataset) %>%
-  spread(Year, NumberOfUniqueVessels) 
+tabv_wide  <- tabv1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = Nves)
+tabv_flags <- tabv1 %>% select(-Nves)    %>% pivot_wider(names_from = Year, values_from = inRange)
 
-
-kbl(tabv2, escape = F, caption = "Number of unique vessels in the CE and CL tables by year", align = rep("c", ncol(tabv2))) %>%
-  kable_styling(bootstrap_options = "striped")
-
+.flag_dt(tabv_wide, tabv_flags, "Number of unique vessels in the CE and CL tables by year")
 ```
 
-
-```{r}
-# Number of species
-CLsp <- CL %>%
-  group_by(CLyear) %>%
-  summarise(NumberOfSpecies = length(unique(CLspecCode)))
-
-```
-
-
-```{r}
-# Run next chunk? 
+```{r eval-auxiliary, include=FALSE}
 doNextChunk <- any(c(params$eurostat, params$prelcatchstat, params$fleetRegister))
 ```
 
-
-```{r, results='asis', eval = doNextChunk}
+```{r aux-header, results='asis', eval=doNextChunk}
 cat("# Comparison with auxiliary data sources")
 ```
 
-
-
-```{r, eval = params$eurostat}
-# Auxiliary information for comparisons 
-# 1. Eurostat data - weight 
-eurostatW <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlanCou)), stringsAsFactors = TRUE) # tag corresponds to catches in all fishing regions by country
-# https://ec.europa.eu/eurostat/databrowser/view/tag00076/default/table?lang=en&category=t_fish
-
-# 2. Eurostat data - number of vessels 
-# eurostatV <- get_eurostat("tag00076", time_format = "num", filters = list(geo = unique(CL$CLlandingCountry)), stringsAsFactors = TRUE)
-
+```{r load-eurostat, eval=params$eurostat}
+# Eurostat landed weight by country (tag00076)
+eurostatW <- get_eurostat(
+  "tag00076",
+  time_format    = "num",
+  filters        = list(geo = unique(CL$CLlanCou)),
+  stringsAsFactors = FALSE
+)
 ```
 
-```{r,  child = '01_Eurostat.Rmd', eval = params$eurostat}
-
+```{r child-eurostat, child='01_Eurostat.Rmd', eval=params$eurostat}
 ```
 
-```{r, eval = params$prelcatchstat}
-# 2. ICES preliminary catches
+```{r load-prelcatch, eval=params$prelcatchstat}
 prelC <- read.prelC(params$prelcatchFile)
 ```
 
-
-```{r,  child = '02_PreliminaryCatches.Rmd', eval = params$prelcatchstat}
-
+```{r child-prelcatch, child='02_PreliminaryCatches.Rmd', eval=params$prelcatchstat}
 ```
 
-
-```{r, eval = params$fleetRegister}
-# 3. Fleet register 
+```{r load-fleet, eval=params$fleetRegister}
 fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
-```{r, child = '03_FleetRegister.Rmd', eval = params$fleetRegister}
-
+```{r child-fleet, child='03_FleetRegister.Rmd', eval=params$fleetRegister}
 ```
 
-
-```{r, child = '04_CL_Multiannual.Rmd'}
-
+```{r child-cl, child='04_CL_Multiannual.Rmd'}
 ```
 
-
-```{r, child = '05_CE_Multiannual.Rmd'}
-
+```{r child-ce, child='05_CE_Multiannual.Rmd'}
 ```
 
-
-```{r, child = '06_CLCE_compare.Rmd'}
-
+```{r child-clce, child='06_CLCE_compare.Rmd'}
 ```
 
-
-```{r, child = '07_Spatial_checks.Rmd'}
-
+```{r child-spatial, child='07_Spatial_checks.Rmd'}
 ```
 
-
-
+```{r child-documentation, child='08_CE_CL_documentation.Rmd'}
+```
