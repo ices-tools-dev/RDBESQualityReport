@@ -21,7 +21,9 @@ params:
 ---
 
 ```{r setup, include=FALSE}
-
+# Use a per-session temp directory for figures so no figure-html folder is
+# created on disk. The report is self_contained so all figures are
+# base64-embedded in the HTML anyway; the on-disk copies are never needed.
 knitr::opts_chunk$set(
   echo       = FALSE,
   warning    = FALSE,
