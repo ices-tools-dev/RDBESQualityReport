@@ -26,7 +26,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
   print(p)
 
   names(CEdb)[names(CEdb) == "value"] <- metric
-  print(rdbes_dt(CEdb, caption = title))
+  print(htmltools::tagList(rdbes_dt(CEdb, caption = title)))
 }
 
 # Helper: same pattern for CL
@@ -47,7 +47,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
   print(p)
 
   names(CLdb)[names(CLdb) == "value"] <- metric
-  print(rdbes_dt(CLdb, caption = title))
+  print(htmltools::tagList(rdbes_dt(CLdb, caption = title)))
 }
 ```
 
@@ -55,7 +55,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialWeight
 
-```{r OfficialWeight}
+```{r OfficialWeight, results='asis'}
 .cl_db_plot(metric     = "CLoffWeight",
             y_label    = "Official weight (t)",
             title      = "Official weight by year, data basis and data source")
@@ -63,7 +63,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificWeight
 
-```{r ScientificWeight}
+```{r ScientificWeight, results='asis'}
 .cl_db_plot(metric     = "CLsciWeight",
             y_label    = "Scientific weight (t)",
             title      = "Scientific weight by year, data basis and data source")
@@ -71,7 +71,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### LandingValue
 
-```{r LandingValue}
+```{r LandingValue, results='asis'}
 .cl_db_plot(metric      = "CLlanVal",
             y_label     = "Landing value",
             title       = "Landing value by year, data basis and data source",
@@ -80,7 +80,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### NumberFractionalTrips
 
-```{r NumberFractionalTrips}
+```{r NumberFractionalTrips, results='asis'}
 .ce_db_plot("CEnumFracTrips",
             y_label = "Number of fractional trips",
             title   = "Number of fractional trips by year, data basis and data source")
@@ -88,7 +88,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### NumberDominantTrips
 
-```{r NumberDominantTrips}
+```{r NumberDominantTrips, results='asis'}
 .ce_db_plot("CEnumDomTrip",
             y_label = "Number of dominant trips",
             title   = "Number of dominant trips by year, data basis and data source")
@@ -96,7 +96,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialDaysAtSea
 
-```{r OfficialDaysAtSea}
+```{r OfficialDaysAtSea, results='asis'}
 .ce_db_plot("CEoffDaySea",
             y_label = "Official days at sea",
             title   = "Official days at sea by year, data basis and data source")
@@ -104,7 +104,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificDaysAtSea
 
-```{r ScientificDaysAtSea}
+```{r ScientificDaysAtSea, results='asis'}
 .ce_db_plot("CEsciDaySea",
             y_label = "Scientific days at sea",
             title   = "Scientific days at sea by year, data basis and data source")
@@ -112,7 +112,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialFishingDays
 
-```{r OfficialFishingDays}
+```{r OfficialFishingDays, results='asis'}
 .ce_db_plot("CEoffFishDay",
             y_label = "Official fishing days",
             title   = "Official fishing days by year, data basis and data source")
@@ -120,7 +120,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificFishingDays
 
-```{r ScientificFishingDays}
+```{r ScientificFishingDays, results='asis'}
 .ce_db_plot("CEsciFishDay",
             y_label = "Scientific fishing days",
             title   = "Scientific fishing days by year, data basis and data source")
@@ -128,7 +128,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialVesselFishingHour
 
-```{r OfficialVesselFishingHour}
+```{r OfficialVesselFishingHour, results='asis'}
 .ce_db_plot("CEoffVesFishHour",
             y_label = "Official vessel fishing hours",
             title   = "Official vessel fishing hours by year, data basis and data source")
@@ -136,7 +136,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificVesselFishingHour
 
-```{r ScientificVesselFishingHour}
+```{r ScientificVesselFishingHour, results='asis'}
 .ce_db_plot("CEsciVesFishHour",
             y_label = "Scientific vessel fishing hours",
             title   = "Scientific vessel fishing hours by year, data basis and data source")
@@ -144,7 +144,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialkWDaysAtSea
 
-```{r OfficialkWDaysAtSea}
+```{r OfficialkWDaysAtSea, results='asis'}
 .ce_db_plot("CEoffkWDaySea",
             y_label = "Official kW days at sea",
             title   = "Official kW days at sea by year, data basis and data source")
@@ -152,7 +152,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientifickWDaysAtSea
 
-```{r ScientifickWDaysAtSea}
+```{r ScientifickWDaysAtSea, results='asis'}
 .ce_db_plot("CEscikWDaySea",
             y_label = "Scientific kW days at sea",
             title   = "Scientific kW days at sea by year, data basis and data source")
@@ -160,7 +160,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialkWFishingDays
 
-```{r OfficialkWFishingDays}
+```{r OfficialkWFishingDays, results='asis'}
 .ce_db_plot("CEoffkWFishDay",
             y_label = "Official kW fishing days",
             title   = "Official kW fishing days by year, data basis and data source")
@@ -168,7 +168,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientifickWFishingDays
 
-```{r ScientifickWFishingDays}
+```{r ScientifickWFishingDays, results='asis'}
 .ce_db_plot("CEscikWFishDay",
             y_label = "Scientific kW fishing days",
             title   = "Scientific kW fishing days by year, data basis and data source")
@@ -176,7 +176,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialkWFishingHours
 
-```{r OfficialkWFishingHours}
+```{r OfficialkWFishingHours, results='asis'}
 .ce_db_plot("CEoffkWFishHour",
             y_label = "Official kW fishing hours",
             title   = "Official kW fishing hours by year, data basis and data source")
@@ -184,7 +184,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientifickWFishingHours
 
-```{r ScientifickWFishingHours}
+```{r ScientifickWFishingHours, results='asis'}
 .ce_db_plot("CEscikWFishHour",
             y_label = "Scientific kW fishing hours",
             title   = "Scientific kW fishing hours by year, data basis and data source")
@@ -192,7 +192,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificGTDaysAtSea
 
-```{r ScientificGTDaysAtSea}
+```{r ScientificGTDaysAtSea, results='asis'}
 .ce_db_plot("CEgTDaySea",
             y_label = "Scientific GT days at sea",
             title   = "Scientific GT days at sea by year, data basis and data source")
@@ -200,7 +200,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificGTFishingDays
 
-```{r ScientificGTFishingDays}
+```{r ScientificGTFishingDays, results='asis'}
 .ce_db_plot("CEgTFishDay",
             y_label = "Scientific GT fishing days",
             title   = "Scientific GT fishing days by year, data basis and data source")
@@ -208,7 +208,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificGTFishingHours
 
-```{r ScientificGTFishingHours}
+```{r ScientificGTFishingHours, results='asis'}
 .ce_db_plot("CEgTFishHour",
             y_label = "Scientific GT fishing hours",
             title   = "Scientific GT fishing hours by year, data basis and data source")
@@ -216,7 +216,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialSoakingMeterHour
 
-```{r OfficialSoakingMeterHour}
+```{r OfficialSoakingMeterHour, results='asis'}
 .ce_db_plot("CEoffSoakMeterHour",
             y_label = "Official soaking meter hours",
             title   = "Official soaking meter hours by year, data basis and data source")
@@ -224,7 +224,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificSoakingMeterHour
 
-```{r ScientificSoakingMeterHour}
+```{r ScientificSoakingMeterHour, results='asis'}
 .ce_db_plot("CEsciSoakMeterHour",
             y_label = "Scientific soaking meter hours",
             title   = "Scientific soaking meter hours by year, data basis and data source")
@@ -232,7 +232,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### OfficialNumberHaulSets
 
-```{r OfficialNumberHaulSets}
+```{r OfficialNumberHaulSets, results='asis'}
 .ce_db_plot("CEoffNumHaulSet",
             y_label = "Official number of hauls/sets",
             title   = "Official number of hauls/sets by year, data basis and data source")
@@ -240,7 +240,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### ScientificNumberHaulSets
 
-```{r ScientificNumberHaulSets}
+```{r ScientificNumberHaulSets, results='asis'}
 .ce_db_plot("CEsciNumHaulSet",
             y_label = "Scientific number of hauls/sets",
             title   = "Scientific number of hauls/sets by year, data basis and data source")
@@ -248,7 +248,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 
 ### GearDimensions
 
-```{r GearDimensions}
+```{r GearDimensions, results='asis'}
 .ce_db_plot("CEgearDim",
             y_label = "Gear dimensions",
             title   = "Gear dimensions by year, data basis and data source")
@@ -279,31 +279,31 @@ Proportion of records assigned to the catch-all metier `MIS_MIS_0_0_0` relative 
   names(result)[names(result) == "MIS"] <- paste0(metric_col, "_MIS")
   names(result)[names(result) == "ALL"] <- paste0(metric_col, "_ALL")
 
-  print(rdbes_dt(result, caption = caption_text))
+  print(htmltools::tagList(rdbes_dt(result, caption = caption_text)))
 }
 ```
 
-```{r OffWeightMIS}
+```{r OffWeightMIS, results='asis'}
 .mis_table(CL, "CLmetier6", "CLoffWeight",
            "MIS_MIS_0_0_0 share by official weight")
 ```
 
-```{r SciWeightMIS}
+```{r SciWeightMIS, results='asis'}
 .mis_table(CL, "CLmetier6", "CLsciWeight",
            "MIS_MIS_0_0_0 share by scientific weight")
 ```
 
-```{r LanValMIS}
+```{r LanValMIS, results='asis'}
 .mis_table(CL, "CLmetier6", "CLlanVal",
            "MIS_MIS_0_0_0 share by landing value")
 ```
 
-```{r OffFishingDaysMIS}
+```{r OffFishingDaysMIS, results='asis'}
 .mis_table(CE, "CEmetier6", "CEoffFishDay",
            "MIS_MIS_0_0_0 share by official fishing days")
 ```
 
-```{r SciFishingDaysMIS}
+```{r SciFishingDaysMIS, results='asis'}
 .mis_table(CE, "CEmetier6", "CEsciFishDay",
            "MIS_MIS_0_0_0 share by scientific fishing days")
 ```
