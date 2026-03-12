@@ -257,17 +257,29 @@ CEr <- CE %>%
 tabN1 <- bind_rows(CLr, CEr) %>%
   group_by(Dataset) %>%
   mutate(
-    ref  = n[which.max(Year)],
-    Pos  = ref * 1.3,
-    Neg  = ref * 0.7,
-    n    = cell_spec(n, color = ifelse(n <= Pos & n >= Neg, "black", "red"))
+    ref   = n[which.max(Year)],
+    inRange = n <= ref * 1.3 & n >= ref * 0.7
   ) %>%
-  select(Year, n, Dataset)
+  select(Year, n, inRange, Dataset)
 
-tabN2 <- tabN1 %>% pivot_wider(names_from = Year, values_from = n)
+tabN_wide  <- tabN1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = n)
+tabN_flags <- tabN1 %>% select(-n)       %>% pivot_wider(names_from = Year, values_from = inRange)
+year_cols  <- setdiff(names(tabN_wide), "Dataset")
 
-rdbes_dt(tabN2, caption = "Number of records in the CE and CL tables by year",
-         escape = FALSE)
+.flag_dt <- function(wide, flags, caption) {
+  dt <- rdbes_dt(wide, caption = caption)
+  for (yr in intersect(year_cols, names(wide))) {
+    ok  <- flags[[yr]]
+    vals <- wide[[yr]]
+    dt <- DT::formatStyle(dt, yr,
+      backgroundColor = DT::styleEqual(vals, ifelse(ok, "transparent", "#ffe8e8")),
+      color           = DT::styleEqual(vals, ifelse(ok, "inherit",     "#c0392b")),
+      fontWeight      = DT::styleEqual(vals, ifelse(ok, "normal",      "bold")))
+  }
+  dt
+}
+
+.flag_dt(tabN_wide, tabN_flags, "Number of records in the CE and CL tables by year")
 ```
 
 ```{r summary-metiers}
@@ -287,17 +299,15 @@ CEm <- CE %>%
 tabm1 <- bind_rows(CLm, CEm) %>%
   group_by(Dataset) %>%
   mutate(
-    ref  = Nmet[which.max(Year)],
-    Pos  = ref * 1.3,
-    Neg  = ref * 0.7,
-    Nmet = cell_spec(Nmet, color = ifelse(Nmet <= Pos & Nmet >= Neg, "black", "red"))
+    ref     = Nmet[which.max(Year)],
+    inRange = Nmet <= ref * 1.3 & Nmet >= ref * 0.7
   ) %>%
-  select(Year, Nmet, Dataset)
+  select(Year, Nmet, inRange, Dataset)
 
-tabm2 <- tabm1 %>% pivot_wider(names_from = Year, values_from = Nmet)
+tabm_wide  <- tabm1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = Nmet)
+tabm_flags <- tabm1 %>% select(-Nmet)    %>% pivot_wider(names_from = Year, values_from = inRange)
 
-rdbes_dt(tabm2, caption = "Number of unique metiers level 6 in the CE and CL tables by year",
-         escape = FALSE)
+.flag_dt(tabm_wide, tabm_flags, "Number of unique metiers level 6 in the CE and CL tables by year")
 ```
 
 ```{r summary-vessels}
@@ -325,19 +335,16 @@ CEv <- CE %>%
 tabv1 <- bind_rows(CLv, CEv) %>%
   group_by(Dataset) %>%
   mutate(
-    ref  = NumberOfUniqueVessels[which.max(Year)],
-    Pos  = ref * 1.3,
-    Neg  = ref * 0.7,
-    Nves = cell_spec(NumberOfUniqueVessels,
-                     color = ifelse(NumberOfUniqueVessels <= Pos &
-                                    NumberOfUniqueVessels >= Neg, "black", "red"))
+    ref     = NumberOfUniqueVessels[which.max(Year)],
+    inRange = NumberOfUniqueVessels <= ref * 1.3 & NumberOfUniqueVessels >= ref * 0.7
   ) %>%
-  select(Year, Nves, Dataset)
+  select(Year, NumberOfUniqueVessels, inRange, Dataset) %>%
+  rename(Nves = NumberOfUniqueVessels)
 
-tabv2 <- tabv1 %>% pivot_wider(names_from = Year, values_from = Nves)
+tabv_wide  <- tabv1 %>% select(-inRange) %>% pivot_wider(names_from = Year, values_from = Nves)
+tabv_flags <- tabv1 %>% select(-Nves)    %>% pivot_wider(names_from = Year, values_from = inRange)
 
-rdbes_dt(tabv2, caption = "Number of unique vessels in the CE and CL tables by year",
-         escape = FALSE)
+.flag_dt(tabv_wide, tabv_flags, "Number of unique vessels in the CE and CL tables by year")
 ```
 
 ```{r eval-auxiliary, include=FALSE}
