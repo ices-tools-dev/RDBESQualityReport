@@ -19,6 +19,9 @@ CL_agg <- CL %>%
   ) %>%
   filter(CLyear %in% unique(prelC1$Year))
 
+
+prelC1 <- mutate(prelC1, AphiaID = as.character(AphiaID))
+
 prelCatches <- left_join(
   prelC1, CL_agg,
   by = c(
