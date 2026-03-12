@@ -1,0 +1,405 @@
+
+```{r cs-guard, include=FALSE}
+if (is.null(cs) || !is.data.frame(cs) || nrow(cs) == 0) {
+  knitr::knit_exit()
+}
+```
+
+# CS — Commercial Sampling
+
+```{r cs-packages, include=FALSE}
+if (!requireNamespace("kableExtra", quietly = TRUE)) {
+  install.packages("kableExtra", quiet = TRUE)
+}
+suppressPackageStartupMessages(library(kableExtra))
+```
+
+```{r cs-kable-helper, include=FALSE}
+# ---------------------------------------------------------------------------
+# Shared kable helper for the CS section — styled to match the report theme
+# ---------------------------------------------------------------------------
+cs_kable <- function(data, ...) {
+  kable(data, align = "c", ...) |>
+    kable_styling(
+      bootstrap_options = c("striped", "hover"),
+      full_width        = FALSE
+    ) |>
+    column_spec(1, width = "4cm") |>
+    column_spec(seq(2, ncol(data)), width = "3cm")
+}
+
+# ---------------------------------------------------------------------------
+# Helper: build a summary table (count of distinct IDs) by a grouping
+# variable, add a Total row, and replace NAs with empty strings.
+# Used by Tables 1, 2, 4, 5, 6, 7.
+# ---------------------------------------------------------------------------
+.cs_count_wide <- function(data, id_col, group_col,
+                            row_col    = "Year/Hierarchy",
+                            year_col   = "DEyear",
+                            row_total  = TRUE) {
+  data |>
+    select(all_of(c(year_col, group_col, id_col))) |>
+    filter(!is.na(.data[[id_col]]), .data[[id_col]] != "") |>
+    distinct() |>
+    group_by(across(all_of(c(year_col, group_col)))) |>
+    count() |>
+    arrange(.data[[group_col]]) |>
+    pivot_wider(names_from  = all_of(group_col),
+                values_from = n) |>
+    rename(`Year/Hierarchy` = all_of(year_col)) |>
+    rowwise() |>
+    mutate(Total = sum(c_across(where(is.numeric)), na.rm = TRUE)) |>
+    mutate(`Year/Hierarchy` = as.character(`Year/Hierarchy`)) -> out
+
+  if (row_total) {
+    total_row <- out |>
+      ungroup() |>
+      summarise(`Year/Hierarchy` = "Total",
+                across(-`Year/Hierarchy`, sum, na.rm = TRUE))
+    out <- bind_rows(out, total_row)
+  }
+
+  out |> mutate(across(everything(), ~ replace_na(as.character(.), "")))
+}
+
+# ---------------------------------------------------------------------------
+# Helper: combine a "all" summary with a "subset" summary so that the
+# subset counts appear in brackets next to the main count.
+# ---------------------------------------------------------------------------
+.cs_combine_bracket <- function(main_tbl, sub_tbl) {
+  combined <- main_tbl |>
+    left_join(sub_tbl, by = "Year/Hierarchy", suffix = c("", ".y"))
+
+  combined <- combined |>
+    mutate(across(ends_with(".y"),
+                  ~ paste0("(", replace_na(as.character(.), "0"), ")")))
+
+  for (col in setdiff(colnames(main_tbl), "Year/Hierarchy")) {
+    combined[[col]] <- paste0(combined[[col]],
+                              combined[[paste0(col, ".y")]])
+  }
+
+  combined |>
+    select(-ends_with(".y")) |>
+    mutate(
+      across(everything(), ~ gsub("\\(NA\\)", "", .)),
+      across(everything(), ~ gsub("\\(0\\)",  "", .)),
+      across(everything(), ~ gsub("\\(\\)",   "", .))
+    )
+}
+```
+
+## Sample information
+
+**Table 1.** Total number of Sampling Details (SD) records by hierarchy, including national and regional
+routines. Counts for regional sampling schemes (`RegPilCF`, `RegPilIB`, `RegRouCF`) are shown in
+brackets.
+
+```{r cs-table1}
+sd_all <- .cs_count_wide(cs, "SDid", "DEhierarchy")
+
+sd_reg <- cs |>
+  filter(DEsampSchemeType %in% c("RegPilCF", "RegPilIB", "RegRouCF")) |>
+  .cs_count_wide("SDid", "DEhierarchy")
+
+.cs_combine_bracket(sd_all, sd_reg) |>
+  cs_kable(caption = "SD records by hierarchy and year")
+```
+
+**Table 2.** Total number of Sampling Details (SD) records by country, including national and regional
+routines. Counts for regional sampling schemes are shown in brackets.
+
+```{r cs-table2}
+sd_all_ctry <- .cs_count_wide(cs, "SDid", "SDctry")
+
+sd_reg_ctry <- cs |>
+  filter(DEsampSchemeType %in% c("RegPilCF", "RegPilIB", "RegRouCF")) |>
+  .cs_count_wide("SDid", "SDctry")
+
+.cs_combine_bracket(sd_all_ctry, sd_reg_ctry) |>
+  cs_kable(caption = "SD records by country and year")
+```
+
+## Samples data
+
+### Number of species in Sample (SA)
+
+**Table 3.** Number of unique species in Sample (SA) by hierarchy. The Total column and row give
+unique species counts for the respective aggregation.
+
+```{r cs-table3}
+# Per-year, per-hierarchy unique species count
+sa_spe <- cs |>
+  select(DEhierarchy, DEyear, SAspeCode) |>
+  filter(!is.na(SAspeCode)) |>
+  distinct() |>
+  group_by(DEyear, DEhierarchy) |>
+  count() |>
+  arrange(DEhierarchy) |>
+  pivot_wider(names_from = DEhierarchy, values_from = n) |>
+  rename(`Year/Hierarchy` = DEyear) |>
+  mutate(`Year/Hierarchy` = as.character(`Year/Hierarchy`))
+
+# Total unique species per year (across hierarchies)
+sa_spe_total_col <- cs |>
+  select(DEyear, SAspeCode) |>
+  filter(!is.na(SAspeCode)) |>
+  distinct() |>
+  group_by(DEyear) |>
+  count() |>
+  rename(`Year/Hierarchy` = DEyear, Total = n) |>
+  mutate(`Year/Hierarchy` = as.character(`Year/Hierarchy`))
+
+sa_spe <- sa_spe |> left_join(sa_spe_total_col, by = "Year/Hierarchy")
+
+# Total row: unique species per hierarchy (across all years)
+sa_spe_row <- cs |>
+  select(DEhierarchy, SAspeCode) |>
+  distinct() |>
+  group_by(DEhierarchy) |>
+  count() |>
+  arrange(DEhierarchy) |>
+  pivot_wider(names_from = DEhierarchy, values_from = n) |>
+  mutate(`Year/Hierarchy` = "Total")
+
+sa_spe_row_total <- cs |>
+  select(SAspeCode) |>
+  distinct() |>
+  count() |>
+  rename(Total = n)
+
+total_row <- cbind(sa_spe_row, sa_spe_row_total)
+
+bind_rows(sa_spe, total_row) |>
+  mutate(across(everything(), ~ replace_na(as.character(.), ""))) |>
+  kable(align = "c",
+        caption = "Unique species in SA by hierarchy and year") |>
+  kable_styling(bootstrap_options = c("striped", "hover"),
+                full_width = FALSE)
+```
+
+### Number of records in Frequency Measure (FM) and Biological Measurement (BV)
+
+**Table 4.** Number of Frequency Measure (FM) records by hierarchy. Counts for lower hierarchy B are
+shown in brackets.
+
+```{r cs-table4}
+fm_all <- .cs_count_wide(cs, "FMid", "DEhierarchy")
+
+fm_b   <- cs |>
+  filter(SAlowHierarchy == "B") |>
+  .cs_count_wide("FMid", "DEhierarchy")
+
+.cs_combine_bracket(fm_all, fm_b) |>
+  cs_kable(caption = "FM records by hierarchy and year")
+```
+
+**Table 5.** Number of Frequency Measure (FM) records by country. Counts for lower hierarchy B are
+shown in brackets.
+
+```{r cs-table5}
+fm_all_ctry <- .cs_count_wide(cs, "FMid", "SDctry")
+
+fm_b_ctry   <- cs |>
+  filter(SAlowHierarchy == "B") |>
+  .cs_count_wide("FMid", "SDctry")
+
+.cs_combine_bracket(fm_all_ctry, fm_b_ctry) |>
+  cs_kable(caption = "FM records by country and year")
+```
+
+**Table 6.** Number of Biological Measurement (BV) records by hierarchy. Counts for lower hierarchy C
+(under Sample SA) are shown in brackets.
+
+```{r cs-table6}
+bv_all  <- .cs_count_wide(cs, "BVid", "DEhierarchy")
+
+bv_c    <- cs |>
+  filter(SAlowHierarchy == "C") |>
+  .cs_count_wide("BVid", "DEhierarchy")
+
+.cs_combine_bracket(bv_all, bv_c) |>
+  cs_kable(caption = "BV records by hierarchy and year")
+```
+
+**Table 7.** Number of Biological Measurement (BV) records by country. Counts for lower hierarchy C
+are shown in brackets.
+
+```{r cs-table7}
+bv_all_ctry <- .cs_count_wide(cs, "BVid", "SDctry")
+
+bv_c_ctry   <- cs |>
+  filter(SAlowHierarchy == "C") |>
+  .cs_count_wide("BVid", "SDctry")
+
+.cs_combine_bracket(bv_all_ctry, bv_c_ctry) |>
+  cs_kable(caption = "BV records by country and year")
+```
+
+### Types of biological measurements (BV)
+
+**Table 8.** Biological measurement types per fish in Biological Measurement (BV), counted by country.
+For hierarchies A and B, length information is taken from Frequency Measure (FM) when not present in BV.
+
+```{r cs-table8}
+# Pivot BV measurements wide so each type becomes its own column
+cs_bv <- cs |>
+  pivot_wider(names_from = BVtypeMeas, values_from = BVvalueMeas)
+
+# Carry FM length measurements into BV when missing (hierarchies A/B)
+cs_bv$ForkLength <- NA_character_
+
+cs_bv <- cs_bv |>
+  mutate(
+    LengthTotal = ifelse(FMtypeMeas == "LengthTotal" &
+                           (is.na(LengthTotal) | LengthTotal == ""),
+                         FMclassMeas, LengthTotal),
+    ForkLength  = ifelse(FMtypeMeas == "ForkLength" &
+                           (is.na(ForkLength) | ForkLength == ""),
+                         FMclassMeas, ForkLength)
+  )
+
+# Attach species and fish IDs — join via SAid (SA FK in BV) and BVfishId (BV PK)
+species_ref <- cs |>
+  select(SDctry, SAid, SAspeCode, SAspeCodeFAO, BVfishId) |>
+  distinct()
+
+cs_bv <- cs_bv |> left_join(species_ref)
+
+# One row per individual fish (unique SAid + BVfishId combination)
+cs_bv_fish <- cs_bv |>
+  select(SDctry, SAid, SAspeCode, BVfishId,
+         LengthTotal, Sex, WeightLive, Age, Maturity,
+         OtolithCollected, WeightMeasured, InfoGenetic, InfoParasite,
+         Stock, ScaleCollected, ForkLength) |>
+  filter(!is.na(BVfishId), BVfishId != "") |>
+  mutate(FishId = paste0(SAid, "_", BVfishId)) |>
+  group_by(SDctry, SAspeCode, FishId) |>
+  summarise(
+    LengthTotal      = first(na.omit(LengthTotal)),
+    ForkLength       = first(na.omit(ForkLength)),
+    Sex              = first(na.omit(Sex)),
+    WeightLive       = first(na.omit(WeightLive)),
+    Age              = first(na.omit(Age)),
+    Maturity         = first(na.omit(Maturity)),
+    OtolithCollected = first(na.omit(OtolithCollected)),
+    WeightMeasured   = first(na.omit(WeightMeasured)),
+    InfoGenetic      = first(na.omit(InfoGenetic)),
+    InfoParasite     = first(na.omit(InfoParasite)),
+    Stock            = first(na.omit(Stock)),
+    ScaleCollected   = first(na.omit(ScaleCollected)),
+    .groups = "drop"
+  )
+
+cs_bv_fish |>
+  select(FishId, SDctry, LengthTotal, ForkLength, Sex, WeightLive, Age,
+         Maturity, OtolithCollected, WeightMeasured, InfoGenetic,
+         InfoParasite, Stock, ScaleCollected) |>
+  group_by(SDctry) |>
+  summarise(
+    LengthTotal      = sum(!is.na(LengthTotal)),
+    ForkLength       = sum(!is.na(ForkLength)),
+    Sex              = sum(!is.na(Sex)),
+    WeightLive       = sum(!is.na(WeightLive)),
+    Age              = sum(!is.na(Age)),
+    Maturity         = sum(!is.na(Maturity)),
+    OtolithCollected = sum(!is.na(OtolithCollected)),
+    WeightMeasured   = sum(!is.na(WeightMeasured)),
+    InfoGenetic      = sum(!is.na(InfoGenetic)),
+    InfoParasite     = sum(!is.na(InfoParasite)),
+    Stock            = sum(!is.na(Stock)),
+    ScaleCollected   = sum(!is.na(ScaleCollected)),
+    .groups = "drop"
+  ) |>
+  kable(format.args = list(big.mark = " "),
+        caption = "BV measurement types per fish by country (including NAs)") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+**Table 9.** Same as Table 8 but excluding records where `BVvalueMeas` is `NA` or empty.
+
+```{r cs-table9}
+cs_bv_fish |>
+  select(FishId, SDctry, LengthTotal, ForkLength, Sex, WeightLive, Age,
+         Maturity, OtolithCollected, WeightMeasured, InfoGenetic,
+         InfoParasite, Stock, ScaleCollected) |>
+  group_by(SDctry) |>
+  summarise(
+    LengthTotal      = sum(!is.na(LengthTotal) & LengthTotal      != ""),
+    ForkLength       = sum(!is.na(ForkLength)  & ForkLength       != ""),
+    Sex              = sum(!is.na(Sex)          & Sex              != ""),
+    WeightLive       = sum(!is.na(WeightLive)   & WeightLive       != ""),
+    Age              = sum(!is.na(Age)           & Age              != ""),
+    Maturity         = sum(!is.na(Maturity)      & Maturity         != ""),
+    OtolithCollected = sum(!is.na(OtolithCollected) & OtolithCollected != ""),
+    WeightMeasured   = sum(!is.na(WeightMeasured)   & WeightMeasured   != ""),
+    InfoGenetic      = sum(!is.na(InfoGenetic)   & InfoGenetic      != ""),
+    InfoParasite     = sum(!is.na(InfoParasite)  & InfoParasite     != ""),
+    Stock            = sum(!is.na(Stock)          & Stock            != ""),
+    ScaleCollected   = sum(!is.na(ScaleCollected) & ScaleCollected   != ""),
+    .groups = "drop"
+  ) |>
+  kable(format.args = list(big.mark = " "),
+        caption = "BV measurement types per fish by country (non-empty values only)") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```
+
+### BV categorical value distributions
+
+Frequency counts for key categorical biological variables, broken down by country.
+
+```{r cs-bv-distributions}
+# Sex
+cs_bv_fish |>
+  filter(!is.na(Sex)) |>
+  group_by(SDctry, Sex) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "Sex distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# Maturity
+cs_bv_fish |>
+  filter(!is.na(Maturity)) |>
+  group_by(SDctry, Maturity) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "Maturity distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# Otolith collected
+cs_bv_fish |>
+  filter(!is.na(OtolithCollected)) |>
+  group_by(SDctry, OtolithCollected) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "OtolithCollected distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# Age
+cs_bv_fish |>
+  filter(!is.na(Age)) |>
+  group_by(SDctry, Age) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "Age distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# Parasite information
+cs_bv_fish |>
+  filter(!is.na(InfoParasite)) |>
+  group_by(SDctry, InfoParasite) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "InfoParasite distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+
+# Genetic information
+cs_bv_fish |>
+  filter(!is.na(InfoGenetic)) |>
+  group_by(SDctry, InfoGenetic) |>
+  count() |>
+  kable(format.args = list(big.mark = " "),
+        caption = "InfoGenetic distribution by country") |>
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = FALSE)
+```

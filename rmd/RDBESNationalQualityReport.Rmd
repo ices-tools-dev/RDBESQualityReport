@@ -18,6 +18,8 @@ params:
   prelcatchFile:    ""
   fleetRegister:    FALSE
   fleetRegisterFile: ""
+  cs:               FALSE
+  csFile:           ""
 ---
 
 ```{r setup, include=FALSE}
@@ -395,4 +397,29 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```
 
 ```{r child-documentation, child='08_CE_CL_documentation.Rmd'}
+```
+
+```{r load-cs, eval=params$cs, include=FALSE}
+message("load-cs: csFile param = '", params$csFile, "'")
+message("load-cs: file.exists = ", file.exists(params$csFile))
+cs <- read.cs(params$csFile)
+message("load-cs: cs class = ", class(cs), ", nrow = ", if (is.data.frame(cs)) nrow(cs) else "NA")
+```
+
+```{r load-cs-diagnostics, eval=params$cs, results='asis'}
+# Visible diagnostics — printed in the report so they are always readable.
+cat("**CS diagnostics:**\n\n")
+cat("- csFile param: `", params$csFile, "`\n", sep = "")
+cat("- file.exists: ", file.exists(params$csFile), "\n", sep = "")
+if (file.exists(params$csFile)) {
+  zc <- unzip(params$csFile, list = TRUE)$Name
+  csvs <- zc[grepl("\\.csv$", zc, ignore.case = TRUE)]
+  cat("- CSVs in zip:\n\n")
+  cat(paste0("  - `", csvs, "`\n"), sep = "")
+}
+cat("- cs loaded: ", !is.null(cs) && is.data.frame(cs), "\n", sep = "")
+if (!is.null(cs) && is.data.frame(cs)) cat("- cs nrow: ", nrow(cs), "\n", sep = "")
+```
+
+```{r child-cs, child='09_CS_Summary.Rmd', eval=params$cs}
 ```
