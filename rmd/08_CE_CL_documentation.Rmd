@@ -14,7 +14,7 @@ CL$CLlanVal <- suppressWarnings(as.numeric(CL$CLlanVal))
 .ce_db_plot <- function(metric, y_label, title) {
   CEdb <- CE %>%
     group_by(CEyear, CEdBasSciEff, CEdSouSciEff) %>%
-    summarise(value = sum(.data[[metric]], na.rm = TRUE), .groups = "drop")
+    summarise(value = sum(as.numeric(.data[[metric]]), na.rm = TRUE), .groups = "drop")
 
   p <- ggplot(CEdb, aes(CEdBasSciEff, value, fill = CEdSouSciEff)) +
     geom_bar(stat = "identity") +
