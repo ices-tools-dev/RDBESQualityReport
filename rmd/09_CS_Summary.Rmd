@@ -5,7 +5,7 @@ if (is.null(cs) || !is.data.frame(cs) || nrow(cs) == 0) {
 }
 ```
 
-# CS — Commercial Sampling
+# CS summary
 
 ```{r cs-packages, include=FALSE}
 if (!requireNamespace("kableExtra", quietly = TRUE)) {
