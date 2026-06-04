@@ -18,6 +18,7 @@ params:
   prelcatchFile:    ""
   fleetRegister:    FALSE
   fleetRegisterFile: ""
+  BA_NANSEA: BA_NANSEA
 ---
 
 ```{r setup, include=FALSE}
@@ -391,7 +392,7 @@ fleet <- read.fleet(params$fleetRegisterFile)
 ```{r child-clce, child='06_CLCE_compare.Rmd'}
 ```
 
-```{r child-spatial, child='07_Spatial_checks.Rmd'}
+```{r child-spatial, child='07_Spatial_checks.Rmd', eval=params$BA_NANSEA}
 ```
 
 ```{r child-documentation, child='08_CE_CL_documentation.Rmd'}

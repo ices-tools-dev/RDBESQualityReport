@@ -2,8 +2,8 @@
 # Spatial checks
 
 ```{r spatial-setup, include=FALSE}
-CE_DF <- CE
-CL_DF <- CL
+CE_DF <- CE|>filter(substr(CEarea,1,3)=='27.')
+CL_DF <- CL|>filter(substr(CLarea,1,3)=='27.')
 ```
 
 ```{r spatial-functions, include=FALSE}

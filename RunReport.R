@@ -47,7 +47,10 @@ prelcatchFile  <- ""   # e.g. "C:/Data/PrelimCatches_2023.zip"
 fleetRegister     <- FALSE
 fleetRegisterFile <- ""   # e.g. "C:/Data/vesselRegistryListResults.zip"
 
+# -- Mandatory: National Quality Report for area 27
+# Set FALSE to have results for areas other than 27
 
+BA_NANSEA <- FALSE
 # =============================================================================
 # SECTION 2 — RUN THE REPORT  (no changes needed below this line)
 # =============================================================================
@@ -137,7 +140,8 @@ rmarkdown::render(
     prelcatchstat     = prelcatchstat,
     prelcatchFile     = prelcatchFile,
     fleetRegister     = fleetRegister,
-    fleetRegisterFile = fleetRegisterFile
+    fleetRegisterFile = fleetRegisterFile,
+    BA_NANSEA         = BA_NANSEA
   ),
   output_dir = output_dir
 )
