@@ -132,7 +132,8 @@ rdbes_theme <- function(...) {
 
 # Discrete colour palettes — consistent across all plots
 RDBES_PALETTE <- c("#2a9d8f", "#e76f51", "#457b9d", "#e9c46a",
-                   "#264653", "#f4a261", "#a8dadc", "#e63946")
+                   "#264653", "#f4a261", "#a8dadc", "#e63946",
+                   "#3498db")
 
 RDBES_FILL <- scale_fill_manual(values = RDBES_PALETTE)
 RDBES_COL  <- scale_colour_manual(values = RDBES_PALETTE)
